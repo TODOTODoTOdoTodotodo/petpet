@@ -1,0 +1,58 @@
+{
+  "states" : [
+    {
+      "frames" : {
+        "rotations" : {
+          "east" : "rotations\/east.png",
+          "west" : "rotations\/west.png",
+          "south" : "rotations\/south.png",
+          "north" : "rotations\/north.png"
+        },
+        "animations" : {
+          "Walking" : {
+            "west" : [
+              "animations\/Walking\/west\/frame_000.png",
+              "animations\/Walking\/west\/frame_001.png",
+              "animations\/Walking\/west\/frame_002.png",
+              "animations\/Walking\/west\/frame_003.png",
+              "animations\/Walking\/west\/frame_004.png",
+              "animations\/Walking\/west\/frame_005.png",
+              "animations\/Walking\/west\/frame_006.png",
+              "animations\/Walking\/west\/frame_007.png"
+            ],
+            "east" : [
+              "animations\/Walking\/east\/frame_000.png",
+              "animations\/Walking\/east\/frame_001.png",
+              "animations\/Walking\/east\/frame_002.png",
+              "animations\/Walking\/east\/frame_003.png",
+              "animations\/Walking\/east\/frame_004.png",
+              "animations\/Walking\/east\/frame_005.png",
+              "animations\/Walking\/east\/frame_006.png",
+              "animations\/Walking\/east\/frame_007.png"
+            ],
+            "south" : [
+              "animations\/Walking\/south\/frame_000.png",
+              "animations\/Walking\/south\/frame_001.png",
+              "animations\/Walking\/south\/frame_002.png",
+              "animations\/Walking\/south\/frame_003.png",
+              "animations\/Walking\/south\/frame_004.png",
+              "animations\/Walking\/south\/frame_005.png",
+              "animations\/Walking\/south\/frame_006.png",
+              "animations\/Walking\/south\/frame_007.png"
+            ],
+            "north" : [
+              "animations\/Walking\/north\/frame_000.png",
+              "animations\/Walking\/north\/frame_001.png",
+              "animations\/Walking\/north\/frame_002.png",
+              "animations\/Walking\/north\/frame_003.png",
+              "animations\/Walking\/north\/frame_004.png",
+              "animations\/Walking\/north\/frame_005.png",
+              "animations\/Walking\/north\/frame_006.png",
+              "animations\/Walking\/north\/frame_007.png"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
