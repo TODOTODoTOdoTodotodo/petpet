@@ -1,0 +1,5 @@
+.build/
+DeskPet.app/
+.DS_Store
+pet_debug.log
+*.zip

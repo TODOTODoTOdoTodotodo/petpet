@@ -1,0 +1,104 @@
+{
+  "group_id": "351c5bb1-1414-4cba-b824-3993425f786b",
+  "states": [
+    {
+      "character": {
+        "id": "031a7e73-ed4a-4eba-acd1-6d0692d0577f",
+        "name": "small goblin-like creature, wearing white skull mask with large orange eyes and ragged clothing, holding crude bone and wooden clubs",
+        "prompt": "small goblin-like creature, wearing white skull mask with large orange eyes and ragged clothing, holding crude bone and wooden clubs",
+        "size": {
+          "width": 48,
+          "height": 48
+        },
+        "template_id": "mannequin",
+        "directions": 4,
+        "view": "high top-down",
+        "created_at": "2026-03-23T06:03:24.734765+00:00"
+      },
+      "folder": "small_goblin-like_creature_wearing_white_skull_mas",
+      "frames": {
+        "rotations": {
+          "south": "small_goblin-like_creature_wearing_white_skull_mas/rotations/south.png",
+          "west": "small_goblin-like_creature_wearing_white_skull_mas/rotations/west.png",
+          "east": "small_goblin-like_creature_wearing_white_skull_mas/rotations/east.png",
+          "north": "small_goblin-like_creature_wearing_white_skull_mas/rotations/north.png"
+        },
+        "animations": {
+          "Running": {
+            "east": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/east/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/east/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/east/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/east/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/east/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/east/frame_005.png"
+            ],
+            "south-25d6d0a4": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-25d6d0a4/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-25d6d0a4/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-25d6d0a4/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-25d6d0a4/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-25d6d0a4/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-25d6d0a4/frame_005.png"
+            ],
+            "south-70e9e46c": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-70e9e46c/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-70e9e46c/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-70e9e46c/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-70e9e46c/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-70e9e46c/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-70e9e46c/frame_005.png"
+            ],
+            "south-8d4efa9f": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-8d4efa9f/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-8d4efa9f/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-8d4efa9f/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-8d4efa9f/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-8d4efa9f/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/south-8d4efa9f/frame_005.png"
+            ],
+            "north": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/north/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/north/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/north/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/north/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/north/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/Running/north/frame_005.png"
+            ]
+          },
+          "swing_attack_with_his_crude_bone_in_his_left_hand": {
+            "south": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/south/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/south/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/south/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/south/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/south/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/south/frame_005.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/south/frame_006.png"
+            ],
+            "east": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/east/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/east/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/east/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/east/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/east/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/east/frame_005.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/east/frame_006.png"
+            ],
+            "north": [
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/north/frame_000.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/north/frame_001.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/north/frame_002.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/north/frame_003.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/north/frame_004.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/north/frame_005.png",
+              "small_goblin-like_creature_wearing_white_skull_mas/animations/swing_attack_with_his_crude_bone_in_his_left_hand/north/frame_006.png"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-08-08T13:34:44.941545"
+}
