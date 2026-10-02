@@ -50,3 +50,15 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
 EOF
 
 echo "==> App bundle built successfully at $BUNDLE_DIR"
+
+echo "==> Creating Installable DMG (DeskPet.dmg)..."
+STAGING_DIR="dmg_stage"
+rm -rf "$STAGING_DIR"
+mkdir -p "$STAGING_DIR"
+cp -R "$BUNDLE_DIR" "$STAGING_DIR/"
+ln -s /Applications "$STAGING_DIR/Applications"
+
+hdiutil create -volname "DeskPet" -srcfolder "$STAGING_DIR" -ov -format UDZO "DeskPet.dmg" > /dev/null
+
+rm -rf "$STAGING_DIR"
+echo "==> DMG successfully created: DeskPet.dmg! Share this file with others."
