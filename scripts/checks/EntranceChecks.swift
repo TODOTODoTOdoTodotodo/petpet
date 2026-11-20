@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for checking the pets' entrance: hidden until their turn, dropping one after another

@@ -1,6 +1,6 @@
 # DeskPet 윈도우 이식 검토 (2026-11-20)
 
-일정과 공수는 추정치다. **0단계는 2026-11-20에 끝냈다(8절).**
+일정과 공수는 추정치다. **0단계는 2026-11-20에 끝냈다(8절). 1단계 결과는 9절, 2단계 실행 계획은 10절에 있다.**
 
 ## 1. 결론
 - **Swift를 유지하고, 운영체제에 붙는 부분만 윈도우용으로 새로 짠다.** Swift는 윈도우용 공식 도구 모음이 있고, `import WinSDK`로 Win32를 직접 부를 수 있다.
@@ -25,7 +25,7 @@
 | `NSWorkspace` 맨 앞 앱 | `SystemDesktop` | `GetForegroundWindow` + `GetWindowThreadProcessId`, 실행 파일 이름 | 하 |
 | `NSPanel` 투명 오버레이 + 클릭 관통 | `ScreenStage` | 모니터마다 `WS_EX_LAYERED · WS_EX_TOOLWINDOW · WS_EX_TOPMOST` 창 + `UpdateLayeredWindow`. 펫 위가 아닐 때는 `WS_EX_TRANSPARENT`로 관통 | 상 |
 | SpriteKit 그리기 | `Stage/*`, `PetSkin` | 직접 합성: 32비트 비트맵에 프레임을 정수 배율로 복사(도트라 최근접 확대면 충분). 회전하는 무기만 간단한 회전 복사 | 상 |
-| PNG 읽기 (`NSImage`, `CGImage`) | `PetSkin`, `SpriteAlphaScanner` | WIC(`IWICImagingFactory`)로 BGRA 픽셀 읽기 | 중 |
+| PNG 읽기 (`NSImage`, `CGImage`) | `PetSkin`, `SpriteAlphaScanner` | 공통 `PNGDecoder`(1단계에서 만듦)로 RGBA 픽셀 → 미리 곱한 BGRA로 바꿔 보관. WIC 불필요 | 하 |
 | 말풍선 글자·이모지 | `SpeechBubbleNode` | DirectWrite + 컬러 이모지(Segoe UI Emoji) | 중 |
 | 메뉴바 👾 메뉴 | `AppController`, `PetLineup` | 트레이 아이콘(`Shell_NotifyIcon`) + `TrackPopupMenu`. 문구는 `MenuText`를 그대로 씀 | 중 |
 | 펫 우클릭 메뉴·드래그·클릭 | `PetDragInput` | 오버레이 창의 마우스 메시지, `SetCapture` | 중 |
@@ -77,10 +77,10 @@
 | 단계 | 내용 | 확인 방법 | 추정 |
 |---|---|---|---|
 | 0 ✅ | 맥에서 공통 코드 분리, `CGVector` 보완, 스킨 나누기 | 맥 앱 동작 그대로 + 검사 520개 | 완료 |
-| 1 | 윈도우에서 `swift build`(Core만) + 검사 실행 (GitHub Actions 윈도우 러너 또는 윈도우 PC). 스킨 검사용 WIC 로더 필요 | 같은 검사 통과 | 2~3일 |
-| 2 | 창 목록·모니터·오버레이·프레임 그리기·트레이 메뉴·클릭·드래그 | 펫이 창 위를 걷고, 창을 옮기면 따라감 | 2~3주 |
+| 1 ✅ | 윈도우에서 `swift build`(Core만) + 검사 실행 (GitHub Actions 윈도우 러너). 스킨은 WIC 대신 공통 `PNGDecoder`로 읽음 | 같은 검사 통과 | 완료 (9절) |
+| 2 | 창 목록·모니터·오버레이·프레임 그리기·트레이 메뉴·클릭·드래그 (10절) | 펫이 창 위를 걷고, 창을 옮기면 따라감 | 2~3주 |
 | 3 | 말풍선·무기·스킬 효과·잠들기·포인터 쫓기·장난 | 맥과 같은 장면 비교 | 1~2주 |
-| 4 | 타이핑 반응·통화 중·Claude 사용량, 설치 파일 | 설치 후 새 PC에서 실행 | 1주 |
+| 4 | 타이핑 반응·통화 중·Claude 사용량, zip + PowerShell 한 줄 설치 (10.5절) | 설치 후 새 PC에서 실행 | 1주 |
 | 보류 | 일정 말풍선 (윈도우 캘린더 출처 결정 후) | - | - |
 
 ## 7. 위험과 정할 것
@@ -121,3 +121,81 @@
 - **검사에서 Mac 파일을 하나 쓰는 이유:**
   - 검사 실행 파일은 실제 스킨 PNG를 읽어야 해서 `Mac/Skin/MacSprites.swift`를 함께 컴파일한다.
   - 윈도우에서는 이 자리를 WIC 로더로 바꾼다.
+
+## 9. 1단계 결과 (2026-11-20)
+- **GitHub Actions `Core portability`** (`.github/workflows/core-portability.yml`):
+  - Windows 잡: `windows-latest` + Swift 6.3.3(`compnerd/gha-setup-swift`). `swift build`(맥 밖은 `DeskPetCore`만)와 `scripts/verify.sh`(Git Bash)를 돌린다.
+  - Linux 잡: `swift:6.3.3-noble` 컨테이너. 같은 swift-corelibs-foundation이라 윈도우보다 빨리 차이를 잡는다.
+  - `main`, `windows-port/**` 브랜치 push와 PR에서 돈다.
+- **스킨 PNG 읽기:**
+  - WIC 대신 공통 `Core/Skin/PNGDecoder.swift`(inflate 포함, 약 380줄)를 만들었다. 모든 색 형식·1~16비트·tRNS를 읽고, 인터레이스 파일은 읽지 않는다.
+  - 맥 검사가 저장소의 스킨 PNG 전부(공개 520장, 로컬 전용 포함 627장)를 Core Graphics와 같은 픽셀로 읽는지 확인한다(알파 일치, 불투명 픽셀 색 ±2).
+  - 윈도우판 그리기도 이 해독기를 그대로 쓴다. COM 코드를 짜지 않아도 된다.
+- **검사 나누기:**
+  - `SkinChecks`: 픽셀 규칙, PNG 해독(작은 PNG를 직접 만들어 필터·팔레트·1비트·고정 허프만 확인), 실제 스킨 폴더 검사를 플랫폼 로더로 받는 `runLibrary`.
+  - `MacSkinChecks`(`#if canImport(AppKit)`): Core Graphics 한 픽셀 검사, 해독기 = Core Graphics 비교, 앱의 SpriteKit 로더로 스킨 폴더 검사.
+  - 맥 밖에서는 `DecodedFrame`(해독한 픽셀, 동일성 비교)으로 같은 스킨 검사를 돈다. 맥에서도 `-D PORTABLE_CHECKS`로 이 경로를 돌릴 수 있다(644/644).
+  - 검사 파일의 `import CoreGraphics`는 지웠다. 맥에서는 Core의 `PortableGeometry`가 한 번 들여온다.
+- **Core 손질:** JSON 숫자를 `JSONNumber.double`로 읽는다. corelibs-foundation은 `Int`·`Double`을 주고, 이 값이 `NSNumber`로 바뀌지 않을 수 있다. 쓰는 곳은 스킨 `hatAnchor`·`intervals`와 Claude 사용량이다.
+- **`verify.sh`:** `uname`으로 맥·윈도우(MINGW/MSYS)·그 밖을 나눈다. 맥 밖에서는 Core 타입 검사와 검사 실행까지만 하고, SpriteForge 일치 검사(AppKit·ImageIO)는 건너뛴다.
+- **검사 수:**
+  - 맥(로컬, 비공개 스킨 포함): 646개. 0단계 520개에 PNG 해독·비교 등이 더해졌다.
+  - 맥에서 `-D PORTABLE_CHECKS`: 644개. 맥 전용 2개가 빠진다.
+  - CI(Windows·Linux): 605개. 저장소에 없는 비공개 스킨 4종의 검사가 빠진다.
+- **CI 결과 (2026-11-20, `windows-port/phase1`, run 44686663720):**
+  - Windows 잡(Swift 6.3.3, 약 4분)과 Linux 잡(약 1분 반) 모두 `swift build`와 검사 605/605가 통과했다.
+  - Core 코드는 고치지 않고도 윈도우 Foundation에서 컴파일됐다. `CGRect` 멤버, `hypot`, `Timer`, `RunLoop`, `String(format:)`, `JSONSerialization`, `FileManager`가 모두 있다.
+  - 처음 실패한 곳은 검사 파일 하나였다. `CoreGraphics`만 들여오던 `WorldChecks`에 `import Foundation`을 넣어 고쳤다.
+
+## 10. 2단계 실행 계획 (제안, 시작 전 확인 필요)
+목표는 "윈도우에서 펫이 작업 표시줄 위와 창 윗변을 걷고, 창을 옮기면 따라가고, 트레이 메뉴로 끄고 켠다"이다. 윈도우 PC가 없으므로, 단계마다 CI에서 exe를 빌드하고 러너 화면에서 연기 시험(smoke test)을 돌린다. 마지막에는 실제 PC 확인이 한 번 필요하다.
+
+### 10.1 먼저 Core로 올릴 것 (맥에서 하고, 맥 앱 동작은 그대로)
+| 지금 (Mac) | 올릴 것 | 이유 |
+|---|---|---|
+| `World/SystemDesktop.swift`의 `DesktopSource`·`FrontApp` | 프로토콜과 값 타입만 `Core/World` | 윈도우판이 같은 약속을 구현함 |
+| `App/PetDragInput.swift` | 클릭·집기·던지기 판정(거리·시간 임계값, 던지는 속도) | 마우스 이벤트 출처만 다름 |
+| `App/PetSettings.swift` | 설정 항목과 기본값, 저장소 프로토콜 `SettingsStore` | 맥은 `UserDefaults`, 윈도우는 JSON 파일 |
+| `App/PetLineup.swift`·`CollectionMenu.swift` | 메뉴 트리를 데이터로 만드는 부분 (항목·체크·하위 메뉴·명령) | 맥은 `NSMenu`, 윈도우는 `HMENU`로 그리기만 함 |
+| `App/Habitat.swift` | 틱마다 입력을 모아 `PetRoster.step` 부르는 순서 | 입력 출처(포인터·쉰 시간)만 주입 |
+| `Stage/StageDirector.swift`의 그릴 목록 계산 | 펫마다 그릴 프레임·위치·반전·자르기·모자 자리를 계산한 "그리기 목록" | SpriteKit·비트맵 합성이 같은 목록을 그림 |
+- 맥 껍데기는 약 2,300줄이다. 이 중 400~600줄이 Core로 오면 윈도우판 새 코드가 그만큼 준다(추정).
+
+### 10.2 `Sources/DeskPet/Windows` 파일 계획
+| 파일 | 책임 | 핵심 API |
+|---|---|---|
+| `main.swift` | DPI 인식(Per-Monitor v2), 메시지 루프, 60Hz 진행 | `SetProcessDpiAwarenessContext`, `MsgWaitForMultipleObjects` + 고해상도 대기 타이머 |
+| `App/WindowsAppController.swift` | 펫 목록·무대·트레이 묶기, 설정 적용 | - |
+| `World/WindowsDesktop.swift` | `DesktopSource` 구현: 모니터(작업 영역), 앞→뒤 창 목록, 맨 앞 앱 | `EnumDisplayMonitors`·`GetMonitorInfoW`(`rcWork`), `EnumWindows`·`IsWindowVisible`·`DwmGetWindowAttribute`(`DWMWA_EXTENDED_FRAME_BOUNDS`, `DWMWA_CLOAKED`), `GetForegroundWindow`·`QueryFullProcessImageNameW` |
+| `World/WindowsCoordinates.swift` | 가상 화면(왼쪽 위 원점, 아래 +y, 물리 픽셀) ↔ Core(왼쪽 아래, 위 +y) 변환 | 주 모니터 높이 기준 뒤집기 (맥 Quartz → Cocoa와 같은 자리) |
+| `Stage/OverlayWindow.swift` | 모니터마다 투명 최상위 창, 펫 위일 때만 클릭 받기 | `WS_EX_LAYERED · TOOLWINDOW · TOPMOST · NOACTIVATE`, `UpdateLayeredWindow`, `WS_EX_TRANSPARENT` 켜고 끄기 |
+| `Stage/FrameCompositor.swift` | 32비트 DIB에 프레임을 정수 배율·반전·투명도로 복사, 바뀐 영역만 지우기 | `CreateDIBSection` (미리 곱한 BGRA) |
+| `Skin/WindowsSprites.swift` | `PNGDecoder` → 미리 곱한 BGRA 프레임 (`WinSprite`) | 없음 (순수 Swift) |
+| `Menu/TrayMenu.swift` | 트레이 아이콘과 팝업 메뉴, 펫 우클릭 메뉴. 문구는 `MenuText` | `Shell_NotifyIconW`, `CreatePopupMenu`·`AppendMenuW`·`TrackPopupMenu` |
+| `Input/OverlayPointerInput.swift` | 오버레이의 마우스 메시지 → Core의 클릭·드래그 판정 | `WM_LBUTTONDOWN/MOUSEMOVE/LBUTTONUP`, `SetCapture` |
+| `App/WindowsSettingsStore.swift` | `%APPDATA%\DeskPet\settings.json` 읽기·쓰기 | `SHGetKnownFolderPath` 또는 환경 변수 |
+| `App/WindowsLogger.swift` | `%LOCALAPPDATA%\DeskPet\Logs\pet_debug.log` | - |
+- `Package.swift`: `#elseif os(Windows)`로 `DeskPet` 실행 타깃(`Core`+`Windows`)을 더한다. `user32`·`gdi32`·`dwmapi`·`shell32`·`shcore`를 링크하고, 콘솔 창이 뜨지 않게 `/SUBSYSTEM:WINDOWS`로 링크한다. 리눅스는 지금처럼 `DeskPetCore`만 빌드한다.
+- 말풍선 글자는 3단계(DirectWrite)로 미룬다. 2단계에서는 말풍선을 그리지 않는다.
+
+### 10.3 2단계 안의 순서와 확인
+| 묶음 | 내용 | CI 확인 | 추정 |
+|---|---|---|---|
+| 2a | 10.1 Core 올리기 (맥에서) | 맥 검사 + 맥 앱 동작 그대로 + Windows·Linux 잡 | 2~3일 |
+| 2b | exe 뼈대, 트레이 메뉴(끄기), `WindowsDesktop` | `DeskPet.exe --smoke 10`이 모니터·창 목록을 JSON으로 남기고 끝남. 러너에서 메모장을 띄워 그 창이 목록에 있는지 확인 | 3~4일 |
+| 2c | 오버레이 + 합성기, 작업 표시줄 위 걷기 | 연기 시험 중 화면을 캡처해 아티팩트로 올림 (펫이 보이는지 눈으로 확인) | 4~5일 |
+| 2d | 창 윗변·벽, 창 따라가기, 클릭·끌기·던지기, 펫 우클릭 메뉴, 설정 JSON | 연기 시험이 메모장 창을 옮기고 펫이 따라갔는지 JSON으로 확인 | 4~5일 |
+- 러너 화면 캡처와 창 옮기기는 PowerShell(`System.Drawing`, `SetWindowPos`)로 한다. 러너가 화면 없는 상태면 캡처 단계만 건너뛴다.
+
+### 10.4 남는 위험
+- **실제 PC 확인:** 러너는 배율 100%·모니터 하나다. 125%·150% 배율, 여러 모니터, 작업 표시줄 자동 숨김은 실제 PC에서 한 번 봐야 한다.
+- **Swift 윈도우 실행 파일 크기:** Foundation이 ICU 데이터(수십 MB, 추정)를 함께 싣는다. 크면 Core에서 `FoundationEssentials`만 쓰도록 줄이는 방안을 본다.
+- **`WS_EX_TRANSPARENT` 전환 지연:** 펫을 집는 순간 클릭이 뒤 창으로 새면, 맥처럼 포인터 위치로 미리 전환하는 간격을 줄인다.
+
+### 10.5 포장 (4단계 끝)
+- `DeskPet-windows.zip`: `DeskPet.exe` + Swift 실행용 DLL(`swiftCore`, `Foundation` 등) + `Assets/Skins`(공개 캐릭터만, `scripts/private-skins.txt` 제외).
+- `install.ps1`: `irm https://github.com/TODOTODoTOdoTodotodo/petpet/releases/latest/download/install.ps1 | iex`
+  - `%LOCALAPPDATA%\Programs\DeskPet`에 풀고, 시작 메뉴 바로 가기를 만든다. 로그인 시 실행은 선택이다.
+  - `-Uninstall`로 지운다. 환경 변수로 받을 주소·설치 폴더를 바꿔 시험할 수 있게 한다(`install.sh`와 같은 방식).
+  - PowerShell로 받은 파일에는 인터넷 표시(MOTW)가 붙지 않아, 서명이 없어도 SmartScreen 경고가 보통 뜨지 않는다(추정, 실제 PC에서 확인). 브라우저로 받은 zip은 경고가 뜬다.
+- 릴리스 워크플로: 태그 push 때 Windows 러너가 zip을 만들어 Releases에 올린다. 맥 DMG·zip은 지금처럼 로컬에서 만든다.

@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for checking what the pets chase: the active window (default) or the mouse pointer,

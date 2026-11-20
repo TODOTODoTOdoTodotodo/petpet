@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for checking play-fights between pets and how Claude usage drains their energy:

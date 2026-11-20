@@ -35,8 +35,8 @@ struct ClaudeUsage: Equatable {
 
     private static func window(_ value: Any?) -> UsageWindow? {
         guard let table = value as? [String: Any],
-              let used = (table["used_percentage"] as? NSNumber)?.doubleValue,
-              let resets = (table["resets_at"] as? NSNumber)?.doubleValue else { return nil }
+              let used = JSONNumber.double(table["used_percentage"]),
+              let resets = JSONNumber.double(table["resets_at"]) else { return nil }
         return UsageWindow(usedPercent: min(max(used, 0), 100), resetsAt: Date(timeIntervalSince1970: resets))
     }
 }

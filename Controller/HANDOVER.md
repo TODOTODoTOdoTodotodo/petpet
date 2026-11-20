@@ -85,13 +85,16 @@ private/
 │   │   ├── Skin/
 │   │   │   ├── PetSkin.swift          # 스프라이트 목록·애니메이션·방향별 프레임 선택 (그림 형식은 플랫폼이 정함)
 │   │   │   ├── SkinLibrary.swift      # 스킨 폴더 탐색(SkinFolder)·전체 로드
-│   │   │   └── SpriteAlphaScanner.swift # RGBA 픽셀로 빈 프레임 판정, 몸 영역 측정
+│   │   │   ├── SpriteAlphaScanner.swift # RGBA 픽셀로 빈 프레임 판정, 몸 영역 측정
+│   │   │   └── PNGDecoder.swift       # 플랫폼 없이 PNG → RGBA 픽셀 (inflate 포함). 윈도우판 스킨 로더·맥 밖 검사용
 │   │   ├── Schedule/
 │   │   │   ├── ScheduleAnnouncer.swift   # 알릴 시점·문구 결정 (10분 전, 시작, 마감)
 │   │   │   └── ScheduleWatcher.swift     # 30초마다 일정 확인 → 펫에게 전달
 │   │   ├── Usage/ClaudeUsage.swift  # 사용량 파일(rate_limits) 해석, 지금 유효한 사용률
 │   │   ├── Menu/MenuText.swift      # 메뉴 언어 선택과 메뉴 문구 (영어·한국어 쌍)
-│   │   └── Portable/PortableGeometry.swift # 맥은 CoreGraphics를 한 곳에서 들여오고, 그 밖에서는 CGVector를 보완
+│   │   └── Portable/
+│   │       ├── PortableGeometry.swift # 맥은 CoreGraphics를 한 곳에서 들여오고, 그 밖에서는 CGVector를 보완
+│   │       └── JSONNumber.swift       # JSON 숫자 읽기 (맥 NSNumber와 윈도우·리눅스 Int·Double 모두)
 │   └── Mac/                       # macOS 껍데기 (AppKit·SpriteKit·EventKit·CoreAudio)
 │       ├── main.swift
 │       ├── App/
@@ -122,8 +125,9 @@ private/
 ├── .claude/skills/deskpet-sprite/ # 에이전트용 캐릭터 제작 스킬 (sprite-gen 기조, 추가 구독·API 없음)
 ├── scripts/
 │   ├── package_app.sh             # Release 빌드, ad-hoc 서명, DeskPet.app·.dmg·.zip 생성 (기본 공개용, --with-private)
-│   ├── verify.sh                  # Core 홀로 컴파일·맥 전용 import 금지 확인 + 모델 검증 실행
-│   └── checks/                    # 검증 시나리오 (스킨, 월드, 행동, 장시간 무작위, 잠·클릭·인사·일정)
+│   ├── verify.sh                  # Core 홀로 컴파일·맥 전용 import 금지 확인 + 모델 검증 실행 (맥 밖에서는 공통 코드와 검사만)
+│   └── checks/                    # 검증 시나리오 (스킨, 월드, 행동, 장시간 무작위, 잠·클릭·인사·일정). MacSkinChecks만 맥 전용
+├── .github/workflows/core-portability.yml # 공통 코드를 Windows·Linux에서 빌드하고 검사 (윈도우 이식 1단계)
 ├── install.sh                     # 터미널 한 줄 설치·지우기 (Releases의 DeskPet.zip)
 ├── Package.swift
 └── run.sh                         # DeskPet.app 실행
@@ -244,6 +248,8 @@ tail -f ~/Library/Logs/DeskPet/pet_debug.log
 * 공개 배포: `./scripts/package_app.sh`는 `scripts/private-skins.txt`의 캐릭터(Boy·Girl·Goblin·Radish, 출처·재배포 허락 미확인)를 빼고 만든다. 이 4종은 저장소에서도 추적하지 않고(`.gitignore`) 로컬에만 둔다. 개인용으로 모두 넣으려면 `--with-private`(DMG도 그 구성으로 덮어씀).
 * 종료: 메뉴바 `👾` → **Quit DeskPet**(한국어 메뉴: **DeskPet 종료**), 또는 `pkill -f DeskPet`
 * 윈도우 이식: `Controller/WINDOWS_PORT.md`. 0단계 완료 — 공통 코드는 `Sources/DeskPet/Core`(Foundation만), 맥 전용은 `Sources/DeskPet/Mac`. Core에 맥 전용 코드를 넣으면 `verify.sh`가 실패함
+  * 1단계: GitHub Actions `Core portability`가 Windows·Linux에서 `swift build`(DeskPetCore)와 `scripts/verify.sh`를 돌린다. 맥 밖에서는 스킨을 공통 `PNGDecoder`로 읽고, SpriteForge 일치 검사는 건너뛴다.
+  * 맥에서 윈도우와 같은 스킨 경로를 돌려 보려면 검사를 `-D PORTABLE_CHECKS`로 컴파일한다. 맥 검사는 `PNGDecoder`가 모든 스킨 PNG를 Core Graphics와 같은 픽셀로 읽는지도 확인한다.
 * XCTest는 Command Line Tools만 설치된 환경에서 쓸 수 없어 `scripts/checks/` 실행 파일로 검증한다. `swift build` 때 나오는 `could not determine XCTest paths` 경고는 같은 이유이며 빌드에 영향 없음.
 
 ---
