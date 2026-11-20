@@ -1,0 +1,49 @@
+name: 아이디어 제안 (Idea)
+description: 펫이 했으면 하는 행동, 새 놀이, 새 캐릭터 등 제안
+title: "[아이디어] "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        제안 고마움. 짧아도 충분함.
+        검토 결과는 이 이슈에 댓글과 라벨로 남김 (수락 · 정보 더 필요 · 나중에 · 하지 않음).
+  - type: textarea
+    id: what
+    attributes:
+      label: 어떤 모습이면 좋을지
+      description: 펫이 무엇을 하는지, 화면에서 어떻게 보이는지
+      placeholder: 예) 창을 닫으면 펫이 창 조각을 주워 감
+    validations:
+      required: true
+  - type: textarea
+    id: when
+    attributes:
+      label: 언제 보고 싶은지
+      description: 어떤 상황에서, 얼마나 자주
+      placeholder: 예) 하루에 한두 번, 창을 닫을 때
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 종류
+      options:
+        - 펫 행동·반응
+        - 펫끼리 놀이
+        - 수집·성장 (물건·모자·친밀도)
+        - 새 캐릭터
+        - 메뉴·설정
+        - 그 밖
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: 참고 (선택)
+      description: 비슷한 예시나 그림. 다른 게임 캐릭터를 그대로 옮기는 제안은 받지 않음
+  - type: checkboxes
+    id: notes
+    attributes:
+      label: 확인
+      options:
+        - label: 개인정보(키 내용, 창 내용, 화면)를 읽어야 하는 기능이 아님
+          required: true

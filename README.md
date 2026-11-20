@@ -188,6 +188,15 @@ mkdir -p "$pet_dir" && echo "$input" | jq -c '{five_hour: .rate_limits.five_hour
 
 `$input`은 상태줄 스크립트가 받은 JSON 전체. 상태줄 설정 방법은 [Claude Code 문서](https://code.claude.com/docs/en/statusline.md) 참고.
 
+## 아이디어 보내기
+
+[아이디어 제안 양식](https://github.com/TODOTODoTOdoTodotodo/petpet/issues/new?template=idea.yml)으로 이슈 등록.
+
+- 펫이 했으면 하는 행동, 새 놀이, 새 캐릭터 등 무엇이든
+- 검토 결과는 그 이슈에 댓글과 라벨로 남김: 수락 · 정보 더 필요 · 나중에 · 하지 않음
+- 받지 않는 제안: 키 내용·창 내용·화면을 읽어야 하는 기능, 다른 게임 캐릭터를 그대로 옮기는 그림
+- 오류 제보는 [일반 이슈](https://github.com/TODOTODoTOdoTodotodo/petpet/issues/new)로
+
 ## 문제 해결
 
 | 증상 | 확인할 것 |
