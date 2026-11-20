@@ -3,6 +3,8 @@ import WinSDK
 
 // 모니터마다 배율이 달라도 실제 픽셀로 좌표를 받음 (Per-Monitor DPI Aware v2)
 _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT(bitPattern: -4))
+// 기본 타이머 간격(약 15.6ms)에서는 16ms 타이머가 31ms로 늘어남. 이 프로세스만 1ms 간격으로
+_ = timeBeginPeriod(1)
 
 /// 숨은 창의 메시지를 앱으로 넘기고, 앱이 처리하지 않은 메시지는 기본 처리
 let windowProcedure: WNDPROC = { window, message, wParam, lParam in

@@ -50,7 +50,8 @@ jobs:
           if (-not ($r.windows | Where-Object { $_.owner -like '*notepad*' })) { throw "notepad window not listed" }
           if ($r.pets.Count -lt 1) { throw "no pets" }
           if ($r.drawings -lt 1) { throw "no drawings composed" }
-          if ($r.ticks -lt 100) { throw "too few ticks: $($r.ticks)" }
+          # 8초 동안 60Hz면 약 480틱. 타이머 간격이 늘어나면 걸림
+          if ($r.ticks -lt 380) { throw "too few ticks: $($r.ticks) in 8s" }
           Write-Host "tray icon shown: $($r.tray)"
       - name: Upload smoke report
         if: always()
