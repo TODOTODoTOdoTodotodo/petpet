@@ -69,7 +69,7 @@ final class WindowsDesktop: DesktopSource {
     private func snapshot(of window: HWND, _ coordinates: WindowsCoordinates) -> WindowSnapshot? {
         guard IsWindowVisible(window), !IsIconic(window) else { return nil }
         // 도구 창(떠 있는 팔레트 등)은 제외
-        guard GetWindowLongPtrW(window, GWL_EXSTYLE) & Int(WS_EX_TOOLWINDOW) == 0 else { return nil }
+        guard GetWindowLongPtrW(window, GWL_EXSTYLE) & LONG_PTR(WS_EX_TOOLWINDOW) == 0 else { return nil }
         // 다른 가상 데스크톱에 있거나 숨겨 둔 창(UWP 대기 창)은 보이지 않음
         var cloaked: DWORD = 0
         if DwmGetWindowAttribute(window, DWORD(DWMWA_CLOAKED.rawValue), &cloaked, DWORD(MemoryLayout<DWORD>.size)) >= 0,
