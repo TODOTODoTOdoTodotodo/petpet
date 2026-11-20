@@ -181,7 +181,7 @@
 ### 10.3 2단계 안의 순서와 확인
 | 묶음 | 내용 | CI 확인 | 추정 |
 |---|---|---|---|
-| 2a | 10.1 Core 올리기 (맥에서) | 맥 검사 + 맥 앱 동작 그대로 + Windows·Linux 잡 | 2~3일 |
+| 2a ✅ | 10.1 Core 올리기 (맥에서) | 맥 검사 + 맥 앱 동작 그대로 + Windows·Linux 잡 | 완료 (10.6) |
 | 2b | exe 뼈대, 트레이 메뉴(끄기), `WindowsDesktop` | `DeskPet.exe --smoke 10`이 모니터·창 목록을 JSON으로 남기고 끝남. 러너에서 메모장을 띄워 그 창이 목록에 있는지 확인 | 3~4일 |
 | 2c | 오버레이 + 합성기, 작업 표시줄 위 걷기 | 연기 시험 중 화면을 캡처해 아티팩트로 올림 (펫이 보이는지 눈으로 확인) | 4~5일 |
 | 2d | 창 윗변·벽, 창 따라가기, 클릭·끌기·던지기, 펫 우클릭 메뉴, 설정 JSON | 연기 시험이 메모장 창을 옮기고 펫이 따라갔는지 JSON으로 확인 | 4~5일 |
@@ -199,3 +199,23 @@
   - `-Uninstall`로 지운다. 환경 변수로 받을 주소·설치 폴더를 바꿔 시험할 수 있게 한다(`install.sh`와 같은 방식).
   - PowerShell로 받은 파일에는 인터넷 표시(MOTW)가 붙지 않아, 서명이 없어도 SmartScreen 경고가 보통 뜨지 않는다(추정, 실제 PC에서 확인). 브라우저로 받은 zip은 경고가 뜬다.
 - 릴리스 워크플로: 태그 push 때 Windows 러너가 zip을 만들어 Releases에 올린다. 맥 DMG·zip은 지금처럼 로컬에서 만든다.
+
+### 10.6 2a 결과 (2026-11-20)
+- **Core로 온 것:**
+  - `Core/World/DesktopSource.swift`: `DesktopSource`, `FrontApp`.
+  - `Core/Habitat`: `HabitatLoop`(틱 순서·갱신 간격), `HostSenses`, `PetStage`, `PetPointerGesture`.
+  - `Core/Stage`: `SceneComposer<Frame>`, `PetDrawing<Frame>`, `ProjectileDrawing`, `ItemDrawing`.
+  - `Core/Settings`: `PetSettings`, `SettingsStore`, `JSONFileSettingsStore`. 윈도우는 이 JSON 저장소를 그대로 쓴다.
+  - `Core/Menu/MenuNode.swift`: `MenuNode`, `MenuCommand`, `MenuDialogs`, `MenuCommandHandler`.
+  - `Core/App`: `AppMenu` + `AppMenuHost`, `PetLineup<Frame>`, `CollectionMenu`, `TreasuryStore` + `TreasuryArchive`.
+- **맥에 남은 것:** `NSEvent`·타이머·화면 알림 연결, `MacHostSenses`, `MacMenuRenderer`(`NSMenu`·`NSAlert`), `UserDefaults` 저장소 두 개, SpriteKit 무대.
+  - `Mac/App`은 1,274줄에서 630줄로 줄었다(`wc -l` 기준).
+- **동작 차이:**
+  - 창 목록 갱신 간격 비교에 1e-6초 여유를 두었다. 전에는 1/60초 틱 여섯 번의 합이 0.1초에 살짝 못 미쳐, 실제로는 7틱(약 0.117초)마다 읽었다. 이제 명세대로 0.1초, 움직일 때 1/30초마다 읽는다.
+  - 펫 수 저장 형식은 정수에서 실수로 바뀌었다. 예전 정수 값도 읽는다.
+  - 이 두 가지 말고는 같다.
+- **확인:**
+  - 맥 검사 705개. 2a 검사 59개(시계·몸짓·설정·그리기 목록·메뉴)가 더해졌다. 맥 밖 경로(`-D PORTABLE_CHECKS`)는 703개다.
+  - 공개 구성 앱을 다시 빌드해 실행했다. 저장된 펫 구성(4마리)·도감(22개)·두 모니터·일정 권한을 그대로 읽고, 쫓기·던지기·결투가 돈다(로그 확인).
+  - 메뉴바·우클릭 메뉴를 눌러 보는 확인은 사용자가 한다.
+- **CI:** `windows-port/phase2a`(run 44692017944)에서 Windows·Linux 모두 `swift build`와 검사 664/664가 통과했다. 1단계 605개에 2a 검사 59개가 더해졌다. 새 Core 코드도 고치지 않고 윈도우 Foundation에서 컴파일됐다.

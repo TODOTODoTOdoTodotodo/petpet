@@ -31,6 +31,10 @@ struct CheckRunner {
         MenuChecks.run(check)
         CollectionChecks.run(check)
         AffectionChecks.run(check)
+        HabitatChecks.run(check)
+        SettingsChecks.run(check)
+        SceneChecks.run(check)
+        AppMenuChecks.run(check, skinsDirectory: skins)
 
         print("\n\(check.total - check.failures)/\(check.total) passed")
         exit(check.failures == 0 ? 0 : 1)

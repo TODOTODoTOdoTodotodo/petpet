@@ -50,7 +50,22 @@ private/
 │   ├── Core/                      # 운영체제를 모르는 공통 코드 (Foundation만, 윈도우판도 그대로 씀)
 │   │   ├── World/
 │   │   │   ├── Geometry.swift         # ScreenArea, WindowSnapshot, Ledge, Wall, 구간 연산
-│   │   │   └── World.swift            # 보이는 발판·벽·바닥·천장 계산과 질의
+│   │   │   ├── World.swift            # 보이는 발판·벽·바닥·천장 계산과 질의
+│   │   │   └── DesktopSource.swift    # 모니터·창 목록·맨 앞 앱을 주는 약속 (맥 SystemDesktop, 윈도우 WindowsDesktop)
+│   │   ├── Habitat/
+│   │   │   ├── HabitatLoop.swift      # 60Hz 한 틱의 순서: 창 갱신(움직이면 빠르게) → 펫 진행 → 그리기 → 마우스 받을 무대
+│   │   │   ├── HostContracts.swift    # 껍데기가 주는 것: HostSenses(포인터·쉰 시간·키 수·마이크), PetStage(무대)
+│   │   │   └── PetPointerGesture.swift # 누름·끌기·뗌·보조 누름 → 쓰다듬기·집기·던지기·펫 메뉴·물건 클릭
+│   │   ├── Stage/
+│   │   │   ├── SceneComposer.swift    # 펫·무기·물건 → 그리기 목록 (발 맞춤·반전 보정·말풍선 숨김·모자·발자국)
+│   │   │   └── SceneDrawings.swift    # PetDrawing<Frame>, ProjectileDrawing, ItemDrawing
+│   │   ├── Settings/
+│   │   │   ├── PetSettings.swift      # 설정 항목·기본값·허용 값 (펫 고유 ID petIDs 포함)
+│   │   │   └── SettingsStore.swift    # 저장소 약속 + JSON 파일 저장소(윈도우 %APPDATA%\DeskPet\settings.json)
+│   │   ├── App/
+│   │   │   ├── AppMenu.swift          # 메뉴바(트레이) 메뉴 데이터와 설정 명령 처리, 껍데기 약속 AppMenuHost
+│   │   │   ├── PetLineup.swift        # 펫마다 캐릭터: 복원·추가·빼기·바꾸기, 우클릭·메뉴바 메뉴 데이터
+│   │   │   └── CollectionMenu.swift   # 도감 메뉴, 펫 메뉴(레벨·모자·손 소품·이름·빼기 확인), 주운 물건 넣기, 도감 저장(TreasuryStore + TreasuryArchive)
 │   │   ├── Pet/
 │   │   │   ├── Pet.swift              # 펫 몸(발 위치·방향·딛는 면), 현재 행동, 말풍선, 클릭·알림 수신
 │   │   │   ├── PetBehavior.swift      # 행동 프로토콜(클릭·알림 반응 포함), 땅 위 공통 반응, 물리 상수
@@ -91,33 +106,35 @@ private/
 │   │   │   ├── ScheduleAnnouncer.swift   # 알릴 시점·문구 결정 (10분 전, 시작, 마감)
 │   │   │   └── ScheduleWatcher.swift     # 30초마다 일정 확인 → 펫에게 전달
 │   │   ├── Usage/ClaudeUsage.swift  # 사용량 파일(rate_limits) 해석, 지금 유효한 사용률
-│   │   ├── Menu/MenuText.swift      # 메뉴 언어 선택과 메뉴 문구 (영어·한국어 쌍)
+│   │   ├── Menu/
+│   │   │   ├── MenuText.swift         # 메뉴 언어 선택과 메뉴 문구 (영어·한국어 쌍)
+│   │   │   └── MenuNode.swift         # 메뉴 한 줄 데이터(MenuNode)·고른 일(MenuCommand)·대화 상자 약속(MenuDialogs)
 │   │   └── Portable/
 │   │       ├── PortableGeometry.swift # 맥은 CoreGraphics를 한 곳에서 들여오고, 그 밖에서는 CGVector를 보완
 │   │       └── JSONNumber.swift       # JSON 숫자 읽기 (맥 NSNumber와 윈도우·리눅스 Int·Double 모두)
 │   └── Mac/                       # macOS 껍데기 (AppKit·SpriteKit·EventKit·CoreAudio)
 │       ├── main.swift
 │       ├── App/
-│       │   ├── AppController.swift    # 앱 수명주기, 메뉴바(👾) 메뉴, 설정 적용
-│       │   ├── Habitat.swift          # 60Hz 시계: 창 갱신 → 펫 진행 → 그리기 → 클릭 라우팅
-│       │   ├── PetDragInput.swift     # 클릭(쓰다듬기)과 집기·끌기·던지기 구분
-│       │   ├── PetSettings.swift      # UserDefaults 설정 저장 (펫 고유 ID petIDs 포함)
-│       │   ├── CollectionMenu.swift   # 도감 메뉴, 펫 메뉴(레벨·모자·손 소품·이름·빼기 확인), 주운 물건 넣기, 도감 저장(TreasuryStore, treasury.v1)
+│       │   ├── AppController.swift    # 앱 수명주기, 공통 메뉴(AppMenu)를 메뉴바(👾)에 띄움, 껍데기 쪽 설정 적용(AppMenuHost)
+│       │   ├── Habitat.swift          # HabitatLoop를 60Hz 타이머·화면 변경 알림에 연결, MacHostSenses
+│       │   ├── PetDragInput.swift     # NSEvent → PetPointerGesture (control 클릭은 보조 누름)
+│       │   ├── MacMenuRenderer.swift  # MenuNode → NSMenu, NSAlert 대화 상자(MacMenuDialogs)
+│       │   ├── UserDefaultsSettingsStore.swift # 설정을 UserDefaults에 (예전 키 그대로)
+│       │   ├── UserDefaultsTreasuryArchive.swift # 도감을 UserDefaults treasury.v1에, 읽지 못하면 treasury.broken으로
 │       │   ├── PetLogger.swift        # 백그라운드 큐 파일 로거
 │       │   ├── MicrophoneMonitor.swift # 마이크 사용 중인지(통화 중) 확인, 소리는 읽지 않음
 │       │   ├── KeyPressCounter.swift  # 키 누름 횟수만 셈 (어떤 키인지·내용은 모름)
 │       │   ├── CursorMover.swift      # 펫이 쥔 포인터를 옮김 (Pointer Pranks 켰을 때만)
-│       │   ├── ClaudeUsageWatcher.swift # 상태줄이 남긴 Claude 사용량 파일을 30초마다 읽음
-│       │   └── PetLineup.swift        # 펫마다 캐릭터: 복원·추가·빼기·바꾸기, 우클릭·메뉴바 메뉴
+│       │   └── ClaudeUsageWatcher.swift # 상태줄이 남긴 Claude 사용량 파일을 30초마다 읽음
 │       ├── World/SystemDesktop.swift # macOS 모니터·창 목록·맨 앞 앱 읽기 (Quartz → Cocoa 좌표)
 │       ├── Schedule/EventKitScheduleSource.swift # 맥 캘린더·미리 알림 읽기, 권한 요청
-│       ├── Skin/MacSprites.swift  # PNG → SpriteKit 텍스처와 픽셀 (MacSkin, SpriteSource)
+│       ├── Skin/MacSprites.swift  # PNG → SpriteKit 텍스처와 픽셀 (MacSkin, MacPetDrawing)
 │       └── Stage/
 │           ├── ScreenStage.swift      # 모니터별 투명 패널, 스프라이트, 말풍선
 │           ├── SpeechBubbleNode.swift # 말풍선 모양 (잡담 흰색, 알림 노란색)
 │           ├── SkillTrailNode.swift   # 스킬 도약 입자 (흙먼지, 불꽃, 칼바람)
-│           ├── DotArt.swift           # 텍스트 도트 → 텍스처·메뉴 아이콘, 물건 그리기 정보
-│           └── StageDirector.swift    # 모니터 구성에 맞춰 무대 관리, 펫 그리기
+│           ├── DotArt.swift           # 텍스트 도트 → 텍스처·메뉴 아이콘
+│           └── StageDirector.swift    # 모니터 구성에 맞춰 무대 관리, 공통 그리기 목록을 무대에 넘김 (PetStage)
 ├── Assets/Skins/                  # 캐릭터 23종 (공개 19종 + 로컬 전용 Boy·Girl·Goblin·Radish), Nabi·Bolt는 SpriteForge 생성물
 ├── Assets/Rigs/                   # SpriteForge 원본: 리그(<이름>.rig.json), 원본 스킨 매달리기(<스킨>.hang.json), 시트 가져오기(<이름>.import.json)
 ├── Assets/Sources/                # 가져온 무료 에셋 원본 줄 PNG와 출처·라이선스 메모 (PixelAdventure1, SunnyLand, NinjaAdventure, DungeonTilesetII)
@@ -250,6 +267,7 @@ tail -f ~/Library/Logs/DeskPet/pet_debug.log
 * 윈도우 이식: `Controller/WINDOWS_PORT.md`. 0단계 완료 — 공통 코드는 `Sources/DeskPet/Core`(Foundation만), 맥 전용은 `Sources/DeskPet/Mac`. Core에 맥 전용 코드를 넣으면 `verify.sh`가 실패함
   * 1단계: GitHub Actions `Core portability`가 Windows·Linux에서 `swift build`(DeskPetCore)와 `scripts/verify.sh`를 돌린다. 맥 밖에서는 스킨을 공통 `PNGDecoder`로 읽고, SpriteForge 일치 검사는 건너뛴다.
   * 맥에서 윈도우와 같은 스킨 경로를 돌려 보려면 검사를 `-D PORTABLE_CHECKS`로 컴파일한다. 맥 검사는 `PNGDecoder`가 모든 스킨 PNG를 Core Graphics와 같은 픽셀로 읽는지도 확인한다.
+  * 2a: 시계(`HabitatLoop`)·끌기 판정·설정·그리기 목록·메뉴 데이터가 Core에 있다. 맥 껍데기는 읽기(`DesktopSource`·`HostSenses`)·그리기(`PetStage`)·메뉴 렌더링·대화 상자·`UserDefaults`만 맡는다. 윈도우판은 같은 약속을 Win32로 구현한다(설계 명세 5.4).
 * XCTest는 Command Line Tools만 설치된 환경에서 쓸 수 없어 `scripts/checks/` 실행 파일로 검증한다. `swift build` 때 나오는 `could not determine XCTest paths` 경고는 같은 이유이며 빌드에 영향 없음.
 
 ---

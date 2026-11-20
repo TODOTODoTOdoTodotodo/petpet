@@ -1,22 +1,6 @@
 import AppKit
 import CoreGraphics
 
-/// This object is responsible for supplying the current displays and visible windows,
-/// so the simulation can run against the real desktop or a scripted one.
-protocol DesktopSource: AnyObject {
-    func displays() -> [ScreenArea]
-    /// 앞에서 뒤 순서의 창 목록
-    func windows() -> [WindowSnapshot]
-    /// 사용자가 보고 있는 맨 앞 앱
-    func frontmostApp() -> FrontApp?
-}
-
-/// 맨 앞 앱의 프로세스 ID와 번들 ID
-struct FrontApp: Equatable {
-    let processID: Int32
-    let bundleID: String?
-}
-
 /// This object is responsible for reading displays and visible app windows from macOS
 /// and converting Quartz window bounds into global Cocoa coordinates.
 final class SystemDesktop: DesktopSource {

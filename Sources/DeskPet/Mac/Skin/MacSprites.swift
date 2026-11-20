@@ -5,12 +5,8 @@ import SpriteKit
 typealias MacSkin = PetSkin<SKTexture>
 typealias MacSkinLibrary = SkinLibrary<SKTexture>
 
-/// This object is responsible for handing the renderer a texture for a pet's current animation.
-protocol SpriteSource: PetAppearance {
-    func sprite(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> SpriteFrame<SKTexture>?
-}
-
-extension PetSkin: SpriteSource where Frame == SKTexture {}
+/// 맥 무대가 그리는 펫 하나 (SpriteKit 텍스처)
+typealias MacPetDrawing = PetDrawing<SKTexture>
 
 /// This object is responsible for decoding a skin PNG on macOS into a pixel-sharp SpriteKit texture,
 /// plus its RGBA pixels so blank cells and body size can be measured by the shared code.
