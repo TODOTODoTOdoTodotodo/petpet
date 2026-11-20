@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for checking that pets standing on the same ledge never overlap:

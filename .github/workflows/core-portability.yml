@@ -1,0 +1,47 @@
+# 공통 코드(Sources/DeskPet/Core)가 맥 밖에서도 빌드되고 검사를 통과하는지 확인 (윈도우 이식 1단계)
+# 윈도우 PC 없이 GitHub Actions 러너로 확인함. 맥 앱 빌드·SpriteForge 검사는 맥에서 scripts/verify.sh로
+name: Core portability
+
+on:
+  push:
+    branches: [main, 'windows-port/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SWIFT_VERSION: "6.3.3"
+
+jobs:
+  windows:
+    name: Windows (Core build + checks)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      # 셸 스크립트가 CRLF로 바뀌면 bash가 못 읽으므로 줄 끝을 그대로 둠
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: compnerd/gha-setup-swift@v0.5.1
+        with:
+          swift-version: swift-${{ env.SWIFT_VERSION }}-release
+          swift-build: ${{ env.SWIFT_VERSION }}-RELEASE
+      - name: swift build (DeskPetCore)
+        run: swift build
+      - name: Checks
+        shell: bash
+        run: scripts/verify.sh
+
+  linux:
+    name: Linux (Core build + checks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # container에는 env를 쓸 수 없어 버전을 직접 적음 (SWIFT_VERSION과 맞출 것)
+    container: swift:6.3.3-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift build (DeskPetCore)
+        run: swift build
+      - name: Checks
+        run: scripts/verify.sh

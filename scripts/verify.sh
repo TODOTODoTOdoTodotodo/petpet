@@ -7,6 +7,13 @@ cd "$(dirname "$0")/.."
 OUT_DIR=".build/checks"
 mkdir -p "$OUT_DIR"
 
+# 맥은 앱 스킨 로더(SpriteKit)와 SpriteForge까지, 그 밖(윈도우·리눅스)은 공통 코드와 검사만
+case "$(uname -s)" in
+    Darwin) PLATFORM=mac; EXE="" ;;
+    MINGW*|MSYS*|CYGWIN*) PLATFORM=windows; EXE=".exe" ;;
+    *) PLATFORM=other; EXE="" ;;
+esac
+
 # 공통 코드(Core)는 맥 껍데기 없이 홀로 컴파일되고 맥 전용 모듈을 쓰지 않아야 함 (윈도우 이식 경계)
 CORE_FILES=$(find Sources/DeskPet/Core -name '*.swift' | sort)
 if grep -nE '^import (AppKit|SpriteKit|CoreGraphics|EventKit|CoreAudio|ImageIO|Cocoa|Quartz|AVFoundation)' $CORE_FILES; then
@@ -16,14 +23,22 @@ fi
 swiftc -parse-as-library -typecheck $CORE_FILES
 echo "  ✓ Core: 맥 껍데기 없이 홀로 컴파일"
 
-# 검사는 공통 코드 + 맥 스킨 로더(PNG 읽기)로 실행
+# 검사는 공통 코드로 실행. 맥은 앱의 스킨 로더(SpriteKit)도 함께 컴파일해 실제 로드 경로를 확인함
+PLATFORM_FILES=""
+[ "$PLATFORM" = mac ] && PLATFORM_FILES="Sources/DeskPet/Mac/Skin/MacSprites.swift"
 swiftc -parse-as-library \
     $CORE_FILES \
-    Sources/DeskPet/Mac/Skin/MacSprites.swift \
+    $PLATFORM_FILES \
     scripts/checks/*.swift \
-    -o "$OUT_DIR/deskpet-checks"
+    -o "$OUT_DIR/deskpet-checks$EXE"
 
-"$OUT_DIR/deskpet-checks" "${1:-Assets/Skins}"
+"$OUT_DIR/deskpet-checks$EXE" "${1:-Assets/Skins}"
+
+# SpriteForge(캐릭터 제작 도구)는 맥 전용 (AppKit·ImageIO)
+if [ "$PLATFORM" != mac ]; then
+    echo "  · $PLATFORM: SpriteForge 일치 검사는 맥에서만"
+    exit 0
+fi
 
 # SpriteForge로 만든 스킨이 리그와 일치하는지 (스킨 폴더를 손으로 고치지 않았는지) 확인
 swift build --product SpriteForge > /dev/null 2>&1 || swift build --product SpriteForge

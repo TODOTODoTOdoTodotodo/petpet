@@ -169,12 +169,11 @@ final class PetSkin<Frame>: PetAppearance {
                 skillStyle = skill
             }
             if let pair = options["hatAnchor"] as? [Any], pair.count == 2 {
-                let number = { (value: Any) in (value as? NSNumber)?.doubleValue ?? (value as? Double) ?? 0 }
-                hatAnchor = CGVector(dx: number(pair[0]), dy: number(pair[1]))
+                hatAnchor = CGVector(dx: JSONNumber.double(pair[0]) ?? 0, dy: JSONNumber.double(pair[1]) ?? 0)
             }
             for (key, value) in options["intervals"] as? [String: Any] ?? [:] {
-                // 숫자가 NSNumber로 오지 않는 Foundation(윈도우 등)도 있어 Double도 받음
-                let seconds = (value as? NSNumber)?.doubleValue ?? (value as? Double) ?? 0
+                // 숫자가 NSNumber로 오지 않는 Foundation(윈도우 등)도 있어 JSONNumber로 받음
+                let seconds = JSONNumber.double(value) ?? 0
                 guard let kind = AnimationKind(rawValue: key), seconds > 0 else { continue }
                 intervalOverrides[kind] = seconds
             }

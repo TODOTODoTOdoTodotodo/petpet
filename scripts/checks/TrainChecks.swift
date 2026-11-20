@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for checking the pet train: the front-most free pet becomes the engine toward

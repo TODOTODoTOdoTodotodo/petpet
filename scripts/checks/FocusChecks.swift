@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for checking what pets do when the user switches windows:

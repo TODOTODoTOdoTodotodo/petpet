@@ -7,7 +7,13 @@ struct CheckRunner {
     static func main() {
         let skins = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "Assets/Skins")
         let check = Checker()
-        SkinChecks.run(check, skinsDirectory: skins)
+        SkinChecks.run(check)
+        #if canImport(AppKit) && !PORTABLE_CHECKS
+        MacSkinChecks.run(check, skinsDirectory: skins)
+        #else
+        // 맥 밖(윈도우·리눅스)은 공통 PNG 해독기로 같은 스킨 확인. 맥에서도 -D PORTABLE_CHECKS로 이 경로를 돌릴 수 있음
+        SkinChecks.runLibrary(check, skinsDirectory: skins, loader: DecodedFrame.load, pixels: { $0.pixels })
+        #endif
         WorldChecks.run(check)
         BehaviorChecks.run(check)
         FeatureChecks.run(check)

@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for a fixed list of schedule items used by checks.

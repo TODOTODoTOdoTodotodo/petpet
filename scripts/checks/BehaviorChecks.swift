@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for running scripted pet scenarios: landing, occlusion, riding windows,

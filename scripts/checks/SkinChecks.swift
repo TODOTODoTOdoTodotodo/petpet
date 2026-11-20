@@ -1,12 +1,10 @@
-import AppKit
-import CoreGraphics
+import Foundation
 
-/// This object is responsible for checking the real skin folders the way the app loads them.
+/// This object is responsible for checking skin pictures the way the app loads them, on any platform:
+/// the pixel rules, the portable PNG decoder, and every real skin folder through a platform `loader`.
 enum SkinChecks {
-    static func run(_ check: Checker, skinsDirectory: URL) {
+    static func run(_ check: Checker) {
         check.section("스캐너")
-        check.expect(scanSinglePixelImage() == .visible(CGRect(x: 0, y: 0, width: 1, height: 1)),
-                     "왼쪽 아래 픽셀을 아래 기준 좌표로 읽음", "\(scanSinglePixelImage())")
         // 플랫폼 없이 픽셀 배열만으로: 4x3 그림의 맨 위 줄 오른쪽 두 칸
         var rgba = [UInt8](repeating: 0, count: 4 * 3 * 4)
         for column in [2, 3] { rgba[column * 4 + 3] = 255 }
@@ -14,8 +12,33 @@ enum SkinChecks {
                      "픽셀 배열(위쪽 줄부터)도 같은 규칙")
         check.expect(SpriteAlphaScanner.scan(SpritePixels(width: 4, height: 3, rgba: [])) == .unreadable, "모자란 픽셀은 읽지 못함")
 
+        check.section("PNG 해독")
+        // 2x2 팔레트(빨강·투명 파랑) + 위 줄 필터 없음, 아래 줄 Up 필터
+        let palette = PNGDecoder.decode(TinyPNG.make(width: 2, height: 2, bitDepth: 8, colorType: 3,
+                                                     rows: [[0, 0, 1], [2, 1, 255]],
+                                                     palette: [255, 0, 0, 0, 0, 255], transparency: [255, 0]))
+        check.expect(palette?.rgba == [255, 0, 0, 255, 0, 0, 255, 0, 0, 0, 255, 0, 255, 0, 0, 255],
+                     "팔레트·tRNS·Up 필터", "\(palette?.rgba ?? [])")
+        // 1비트 회색 3픽셀 (1, 0, 1)
+        let gray = PNGDecoder.decode(TinyPNG.make(width: 3, height: 1, bitDepth: 1, colorType: 0, rows: [[0, 0b1010_0000]]))
+        check.expect(gray?.rgba == [255, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255], "1비트 회색", "\(gray?.rgba ?? [])")
+        // RGBA 2픽셀: Sub 필터와 Paeth 필터
+        let sub = PNGDecoder.decode(TinyPNG.make(width: 2, height: 2, bitDepth: 8, colorType: 6,
+                                                 rows: [[1, 10, 20, 30, 255, 5, 5, 5, 0], [4, 1, 1, 1, 0, 0, 0, 0, 0]]))
+        check.expect(sub?.rgba == [10, 20, 30, 255, 15, 25, 35, 255, 11, 21, 31, 255, 15, 25, 35, 255],
+                     "Sub·Paeth 필터", "\(sub?.rgba ?? [])")
+        check.expect(PNGDecoder.decode(Data([1, 2, 3])) == nil, "PNG가 아니면 nil")
+        // 고정 허프만 블록: zlib이 "aaaaaaaaaa"를 압축한 결과
+        check.expect(Inflater.inflate(zlib: [0x78, 0x9C, 0x4B, 0x4C, 0x84, 0x01, 0x00, 0x14, 0xE1, 0x03, 0xCB]) == Array(repeating: 97, count: 10),
+                     "고정 허프만 + 겹치는 복사")
+    }
+
+    /// 실제 스킨 폴더를 플랫폼 로더로 읽어 확인. pixels는 로드된 프레임의 픽셀 (빈 프레임 확인용)
+    static func runLibrary<Frame: Equatable>(_ check: Checker, skinsDirectory: URL,
+                                             loader: @escaping (URL) -> LoadedSprite<Frame>?,
+                                             pixels: (Frame) -> SpritePixels?) {
         check.section("스킨 로드")
-        let library = MacSkinLibrary(directory: skinsDirectory, loader: MacSpriteLoader.load)
+        let library = SkinLibrary(directory: skinsDirectory, loader: loader)
         check.expect(!library.names.isEmpty, "스킨 폴더에서 스킨을 읽음", skinsDirectory.path)
 
         for name in library.names {
@@ -27,7 +50,7 @@ enum SkinChecks {
 
             check.expect(!skin.walkTextures.isEmpty, "\(name): 걷기 프레임 있음")
             let leftovers = (skin.walkTextures.values.flatMap { $0 } + skin.actionTextures.values.flatMap { $0 })
-                .filter { MacSpriteLoader.pixels(of: $0.cgImage()).map(SpriteAlphaScanner.scan) == .blank }
+                .filter { pixels($0).map(SpriteAlphaScanner.scan) == .blank }
             check.expect(leftovers.isEmpty, "\(name): 로드된 프레임에 빈 프레임 없음", "\(leftovers.count)")
             check.expect(body.width > 4 && body.width <= 48 && body.height > 4 && body.footInset >= 0,
                          "\(name): 몸 크기 측정", "\(body)")
@@ -140,15 +163,48 @@ enum SkinChecks {
             check.expect(nabi.blankFrameCount == 0, "Nabi: 빈 프레임 없음")
         }
     }
+}
 
-    /// 4x4 이미지의 왼쪽 아래 1픽셀만 칠해 스캔
-    private static func scanSinglePixelImage() -> SpriteAlphaScanner.Result {
-        guard let context = CGContext(data: nil, width: 4, height: 4, bitsPerComponent: 8, bytesPerRow: 16,
-                                      space: CGColorSpaceCreateDeviceRGB(),
-                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return .unreadable }
-        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
-        guard let image = context.makeImage(), let pixels = MacSpriteLoader.pixels(of: image) else { return .unreadable }
-        return SpriteAlphaScanner.scan(pixels)
+/// This object is responsible for standing in for a platform texture in checks on systems without one:
+/// one decoded skin picture, compared by identity like a texture object.
+final class DecodedFrame: Equatable {
+    let pixels: SpritePixels
+
+    init(pixels: SpritePixels) {
+        self.pixels = pixels
+    }
+
+    static func load(_ url: URL) -> LoadedSprite<DecodedFrame>? {
+        PNGDecoder.decode(contentsOf: url).map { LoadedSprite(frame: DecodedFrame(pixels: $0), pixels: $0) }
+    }
+
+    static func == (lhs: DecodedFrame, rhs: DecodedFrame) -> Bool {
+        lhs === rhs
+    }
+}
+
+/// This object is responsible for building tiny uncompressed PNG files for decoder checks
+/// (stored deflate blocks, so no compressor is needed; CRCs are zero because the decoder skips them).
+enum TinyPNG {
+    /// rows: 줄마다 필터 바이트 + 줄 바이트
+    static func make(width: Int, height: Int, bitDepth: UInt8, colorType: UInt8, rows: [[UInt8]],
+                     palette: [UInt8] = [], transparency: [UInt8] = []) -> Data {
+        var png: [UInt8] = [137, 80, 78, 71, 13, 10, 26, 10]
+        func chunk(_ type: String, _ body: [UInt8]) {
+            png += bigEndian(body.count) + Array(type.utf8) + body + [0, 0, 0, 0]
+        }
+        chunk("IHDR", bigEndian(width) + bigEndian(height) + [bitDepth, colorType, 0, 0, 0])
+        if !palette.isEmpty { chunk("PLTE", palette) }
+        if !transparency.isEmpty { chunk("tRNS", transparency) }
+        let raw = rows.flatMap { $0 }
+        let length = UInt16(raw.count)
+        let stored: [UInt8] = [1, UInt8(length & 0xFF), UInt8(length >> 8), UInt8(~length & 0xFF), UInt8(~length >> 8)]
+        chunk("IDAT", [0x78, 0x01] + stored + raw + [0, 0, 0, 0])
+        chunk("IEND", [])
+        return Data(png)
+    }
+
+    private static func bigEndian(_ value: Int) -> [UInt8] {
+        [UInt8(value >> 24 & 0xFF), UInt8(value >> 16 & 0xFF), UInt8(value >> 8 & 0xFF), UInt8(value & 0xFF)]
     }
 }

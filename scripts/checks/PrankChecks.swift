@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 /// This object is responsible for checking the opt-in pointer prank: a pet snatches a pointer resting by it,
