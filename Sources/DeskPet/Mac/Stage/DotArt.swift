@@ -52,27 +52,3 @@ enum DotArt {
                        provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
     }
 }
-
-/// 한 무대에 그릴 물건 하나 (전역 좌표)
-struct ItemDrawing {
-    let id: String
-    let kind: ItemKind
-    /// 그림 사각형
-    let rect: CGRect
-    let alpha: CGFloat
-    /// 드문 물건의 반짝임, 또는 클릭했을 때의 반짝임 세기 (0이면 없음)
-    let sparkle: CGFloat
-    /// 드문 물건이 메뉴바로 날아가며 반짝임 꼬리를 남기는지
-    let trail: Bool
-
-    init(_ item: DroppedItem, clock: TimeInterval) {
-        id = item.id
-        kind = item.kind
-        rect = item.rect
-        alpha = item.isBlinkedOut ? 0.15 : CGFloat(1 - 0.4 * (item.flightProgress ?? 0))
-        let flash = CGFloat(item.flashLeft / DroppedItem.flashTime)
-        let rare = item.kind.rarity == .rare && item.flightProgress == nil ? CGFloat(0.35 + 0.35 * sin(clock * 5)) : 0
-        sparkle = max(flash, rare)
-        trail = item.kind.rarity == .rare && item.isFlying
-    }
-}

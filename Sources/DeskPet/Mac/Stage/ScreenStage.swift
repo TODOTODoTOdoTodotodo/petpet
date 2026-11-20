@@ -1,46 +1,6 @@
 import AppKit
 import SpriteKit
 
-/// 한 무대에 그릴 펫 하나의 모습 (전역 좌표)
-struct PetDrawing {
-    let id: String
-    let frame: SpriteFrame<SKTexture>
-    /// 스프라이트 칸의 전역 좌표 사각형
-    let rect: CGRect
-    /// 있으면 숨쉬듯 세로로 들썩이는 위상
-    let breathPhase: Double?
-    let speech: Speech?
-    /// 스킬 도약 꼬리 입자 스타일
-    let trail: SkillStyle?
-    /// 발 위치와 몸 높이 (입자 위치용)
-    let foot: CGPoint
-    let bodyHeight: CGFloat
-    /// 말풍선 꼬리가 가리킬 머리 위 지점
-    let speechAnchor: CGPoint
-    /// 불투명도 (모니터 건너가기)
-    var alpha: CGFloat = 1
-    /// rect 안에서 위아래를 뒤집어 그림 (거꾸로 빼꼼)
-    var upsideDown = false
-    /// 이 높이(전역 y)보다 위는 그리지 않음
-    var hiddenAbove: CGFloat?
-    /// 쓰고 있는 모자와 자리
-    var hat: (kind: HatKind, frame: HatFrame)?
-    /// 앞손에 든 물건과 자리 (Lv.4)
-    var held: (kind: ItemKind, rect: CGRect)?
-    /// 몸을 돌려 그리는 각도 (공중제비)
-    var rotation: CGFloat = 0
-    /// 걸을 때 반짝 발자국 (Lv.5)
-    var sparkles = false
-    /// 발자국 색 단계 (0 기본, 1 분홍, 2 금색)
-    var sparkleTier = 0
-
-    /// rect 중 그려지는 아래쪽 비율 (0이면 다 가려짐)
-    var shownShare: CGFloat {
-        guard let hiddenAbove else { return 1 }
-        return min(max((hiddenAbove - rect.minY) / rect.height, 0), 1)
-    }
-}
-
 /// This object is responsible for drawing the pets that overlap one display,
 /// on a transparent panel that floats above other windows on every Space and lets clicks pass through.
 final class ScreenStage {
@@ -109,7 +69,7 @@ final class ScreenStage {
     }
 
     /// 이 모니터에 걸친 펫과 무기만 그림. 위치는 화면 픽셀 격자에 맞춤
-    func render(_ drawings: [PetDrawing], projectiles: [ProjectileDrawing] = [], items: [ItemDrawing] = []) {
+    func render(_ drawings: [MacPetDrawing], projectiles: [ProjectileDrawing] = [], items: [ItemDrawing] = []) {
         renderProjectiles(projectiles)
         renderItems(items)
         let visible = drawings.filter { $0.rect.intersects(area.frame) }
@@ -154,7 +114,7 @@ final class ScreenStage {
     }
 
     /// 펫 머리 위 모자. 숨쉬기로 몸이 줄면 같이 내려오고, 창 윗변 뒤로 숨은 부분은 잘림
-    private func renderHats(_ drawings: [PetDrawing]) {
+    private func renderHats(_ drawings: [MacPetDrawing]) {
         let wearing = drawings.filter { $0.hat != nil && $0.shownShare > 0 }
         let liveIDs = Set(wearing.map(\.id))
         for (id, node) in hats where !liveIDs.contains(id) {
@@ -191,7 +151,7 @@ final class ScreenStage {
     }
 
     /// 몸이 돌고 있으면 몸 가운데를 축으로 같이 돌려 놓음
-    private func place(_ node: SKSpriteNode, at center: CGPoint, turning drawing: PetDrawing) {
+    private func place(_ node: SKSpriteNode, at center: CGPoint, turning drawing: MacPetDrawing) {
         var point = center
         if drawing.rotation != 0 {
             let pivot = CGPoint(x: drawing.rect.midX, y: drawing.rect.midY)
@@ -204,7 +164,7 @@ final class ScreenStage {
     }
 
     /// 앞손에 든 물건 (Lv.4)
-    private func renderHeld(_ drawings: [PetDrawing]) {
+    private func renderHeld(_ drawings: [MacPetDrawing]) {
         let holding = drawings.filter { $0.held != nil }
         let liveIDs = Set(holding.map(\.id))
         for (id, node) in heldNodes where !liveIDs.contains(id) {
@@ -231,7 +191,7 @@ final class ScreenStage {
     }
 
     /// 걸을 때 발밑에 옅은 반짝임 (Lv.5). 발이 있는 모니터에서만
-    private func renderFootsteps(_ drawings: [PetDrawing]) {
+    private func renderFootsteps(_ drawings: [MacPetDrawing]) {
         for drawing in drawings where drawing.sparkles && area.frame.contains(drawing.foot) {
             let left = (stepClock[drawing.id] ?? 0) - 1.0 / 60
             guard left <= 0 else {
@@ -354,7 +314,7 @@ final class ScreenStage {
     }
 
     /// 꼬리 입자는 발이 있는 모니터에서만 새로 뿜음
-    private func renderTrails(_ drawings: [PetDrawing]) {
+    private func renderTrails(_ drawings: [MacPetDrawing]) {
         let liveIDs = Set(drawings.map(\.id))
         for (id, node) in trails where !liveIDs.contains(id) {
             node.removeFromParent()
@@ -385,7 +345,7 @@ final class ScreenStage {
     }
 
     /// 말풍선은 꼬리 지점이 있는 모니터 한 곳에만 그림
-    private func renderBubbles(_ drawings: [PetDrawing]) {
+    private func renderBubbles(_ drawings: [MacPetDrawing]) {
         let speaking = drawings.filter { $0.speech != nil && area.frame.contains($0.speechAnchor) }
         let liveIDs = Set(speaking.map(\.id))
         for (id, node) in bubbles where !liveIDs.contains(id) {
@@ -424,7 +384,7 @@ final class ScreenStage {
     }
 
     /// 가려진 만큼 잘라 낸 텍스처. 바로 선 몸은 아래쪽, 뒤집힌 몸은 머리가 있는 위쪽을 남김
-    private static func texture(of drawing: PetDrawing, shown: CGFloat) -> SKTexture {
+    private static func texture(of drawing: MacPetDrawing, shown: CGFloat) -> SKTexture {
         guard shown < 1 else { return drawing.frame.texture }
         let part = CGRect(x: 0, y: drawing.upsideDown ? 1 - shown : 0, width: 1, height: shown)
         let texture = SKTexture(rect: part, in: drawing.frame.texture)
