@@ -1,0 +1,73 @@
+{
+  "deskpet" : {
+    "credit" : {
+      "author" : "Pixel-boy and AAA",
+      "license" : "CC0 1.0",
+      "title" : "Ninja Adventure",
+      "url" : "https://pixel-boy.itch.io/ninja-adventure-asset-pack"
+    },
+    "generator" : "SpriteForge",
+    "import" : "Assets/Rigs/Skeleton.import.json",
+    "intervals" : {
+      "act" : 0.29999999999999999,
+      "climb" : 0.14999999999999999,
+      "walk" : 0.14999999999999999
+    },
+    "skill" : "big_jump"
+  },
+  "states" : [
+    {
+      "frames" : {
+        "animations" : {
+          "Climb" : {
+            "north" : [
+              "animations/Climb/north/frame_000.png",
+              "animations/Climb/north/frame_001.png",
+              "animations/Climb/north/frame_002.png",
+              "animations/Climb/north/frame_003.png"
+            ]
+          },
+          "Hang" : {
+            "north" : [
+              "animations/Hang/north/frame_000.png",
+              "animations/Hang/north/frame_001.png",
+              "animations/Hang/north/frame_002.png",
+              "animations/Hang/north/frame_003.png"
+            ]
+          },
+          "Idle" : {
+            "west" : [
+              "animations/Idle/west/frame_000.png"
+            ]
+          },
+          "Jump" : {
+            "west" : [
+              "animations/Jump/west/frame_000.png"
+            ]
+          },
+          "Sleep" : {
+            "west" : [
+              "animations/Sleep/west/frame_000.png"
+            ]
+          },
+          "swing_attack" : {
+            "west" : [
+              "animations/swing_attack/west/frame_000.png"
+            ]
+          },
+          "Walking" : {
+            "west" : [
+              "animations/Walking/west/frame_000.png",
+              "animations/Walking/west/frame_001.png",
+              "animations/Walking/west/frame_002.png",
+              "animations/Walking/west/frame_003.png"
+            ]
+          }
+        },
+        "rotations" : {
+          "west" : "rotations/west.png"
+        }
+      }
+    }
+  ]
+}

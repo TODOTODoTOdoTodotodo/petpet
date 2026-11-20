@@ -1,0 +1,46 @@
+{
+  "deskpet" : {
+    "credit" : {
+      "author" : "Luis Zuno (ansimuz)",
+      "license" : "CC0 1.0",
+      "title" : "Sunny Land",
+      "url" : "https://ansimuz.itch.io/sunny-land-pixel-game-art"
+    },
+    "generator" : "SpriteForge",
+    "hatAnchor" : [
+      6,
+      -2
+    ],
+    "import" : "Assets/Rigs/Opossum.import.json",
+    "intervals" : {
+      "walk" : 0.080000000000000002
+    },
+    "skill" : "big_jump"
+  },
+  "states" : [
+    {
+      "frames" : {
+        "animations" : {
+          "Idle" : {
+            "west" : [
+              "animations/Idle/west/frame_000.png"
+            ]
+          },
+          "Walking" : {
+            "west" : [
+              "animations/Walking/west/frame_000.png",
+              "animations/Walking/west/frame_001.png",
+              "animations/Walking/west/frame_002.png",
+              "animations/Walking/west/frame_003.png",
+              "animations/Walking/west/frame_004.png",
+              "animations/Walking/west/frame_005.png"
+            ]
+          }
+        },
+        "rotations" : {
+          "west" : "rotations/west.png"
+        }
+      }
+    }
+  ]
+}

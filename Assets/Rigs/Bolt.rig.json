@@ -1,0 +1,100 @@
+{
+  "name": "Bolt",
+  "skill": "flame_rocket",
+  "facing": "west",
+  "canvas": 48,
+  "palette": {
+    "k": "#1e2430",
+    "s": "#9fb4c8",
+    "S": "#6d8399",
+    "c": "#5ee3f0",
+    "d": "#2b3a4a",
+    "y": "#ffc94a",
+    "r": "#ff6b5e"
+  },
+  "layers": {
+    "backLeg": {
+      "at": [22, 27],
+      "rows": [
+        "kSSk",
+        "kSSk",
+        "kSSk",
+        "kSSk",
+        "kyyk",
+        "kkkk"
+      ]
+    },
+    "backArm": {
+      "at": [25, 22],
+      "rows": [
+        "kSk",
+        "kSk",
+        "kSk",
+        "kSk",
+        "kSk",
+        "kkk"
+      ]
+    },
+    "body": {
+      "at": [15, 21],
+      "rows": [
+        "..kkkkkkkk..",
+        ".kssssssSSk.",
+        ".ksyysssSSk.",
+        ".ksyysssSSk.",
+        ".kssssssSSk.",
+        ".kSSSSSSSSk.",
+        "..kkkkkkkk.."
+      ]
+    },
+    "frontLeg": {
+      "at": [17, 27],
+      "rows": [
+        "kSSk",
+        "kssk",
+        "kssk",
+        "kssk",
+        "kyyk",
+        "kkkk"
+      ]
+    },
+    "head": {
+      "at": [14, 9],
+      "rows": [
+        "......kk......",
+        ".....krrk.....",
+        "......k.......",
+        "......k.......",
+        ".kkkkkkkkkkkk.",
+        "ksssssssssssSk",
+        "kdddddksssssSk",
+        "kdccddksssssSk",
+        "kdccddkssyysSk",
+        "kdddddksssssSk",
+        "ksssssssssssSk",
+        "kSSSSSSSSSSSSk",
+        ".kkkkkkkkkkkk."
+      ]
+    },
+    "frontArm": {
+      "at": [14, 22],
+      "rows": [
+        "kSk",
+        "ksk",
+        "ksk",
+        "ksk",
+        "kyk",
+        "kkk"
+      ]
+    }
+  },
+  "overlays": {
+    "eyesClosed": {
+      "at": [16, 16],
+      "rows": [
+        "dd",
+        "cc"
+      ]
+    }
+  }
+}

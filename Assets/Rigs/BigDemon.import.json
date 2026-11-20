@@ -1,0 +1,45 @@
+{
+  "name": "BigDemon",
+  "skill": "flame_rocket",
+  "facing": "east",
+  "source": "Assets/Sources/DungeonTilesetII/big_demon",
+  "frame": [
+    32,
+    36
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "files": [
+        "big_demon_idle_anim_f0.png",
+        "big_demon_idle_anim_f1.png",
+        "big_demon_idle_anim_f2.png",
+        "big_demon_idle_anim_f3.png"
+      ]
+    },
+    "Walking": {
+      "files": [
+        "big_demon_run_anim_f0.png",
+        "big_demon_run_anim_f1.png",
+        "big_demon_run_anim_f2.png",
+        "big_demon_run_anim_f3.png"
+      ]
+    },
+    "Jump": {
+      "files": [
+        "big_demon_run_anim_f1.png"
+      ]
+    }
+  },
+  "intervals": {
+    "idle": 0.12,
+    "walk": 0.1
+  },
+  "credit": {
+    "author": "0x72 (Robert)",
+    "title": "16x16 DungeonTileset II",
+    "url": "https://0x72.itch.io/dungeontileset-ii",
+    "license": "CC0 1.0"
+  }
+}

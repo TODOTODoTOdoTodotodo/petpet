@@ -1,0 +1,106 @@
+{
+  "name": "Nabi",
+  "skill": "big_jump",
+  "facing": "west",
+  "canvas": 48,
+  "palette": {
+    "k": "#2b1d1a",
+    "o": "#f0a04b",
+    "O": "#c97a2e",
+    "w": "#fff4e6",
+    "p": "#f29bb0",
+    "e": "#1a1a2e"
+  },
+  "layers": {
+    "tail": {
+      "at": [27, 21],
+      "rows": [
+        "..kk",
+        ".kok",
+        ".kok",
+        "kok.",
+        "kok.",
+        "kk.."
+      ]
+    },
+    "backLeg": {
+      "at": [23, 30],
+      "rows": [
+        "kOOk",
+        "kOOk",
+        "kOOk",
+        "kOOk",
+        "kkkk"
+      ]
+    },
+    "backArm": {
+      "at": [26, 25],
+      "rows": [
+        "kOk",
+        "kOk",
+        "kOk",
+        "kOk",
+        "kkk"
+      ]
+    },
+    "body": {
+      "at": [16, 23],
+      "rows": [
+        "..kkkkkkkk..",
+        ".kwwooooOOk.",
+        ".kwwooooOOk.",
+        ".kwwoooOOOk.",
+        ".kwoooooOOk.",
+        ".kooooooOOk.",
+        ".kOooooOOOk.",
+        "..kkkkkkkk.."
+      ]
+    },
+    "frontLeg": {
+      "at": [18, 30],
+      "rows": [
+        "kook",
+        "kook",
+        "kook",
+        "kwwk",
+        "kkkk"
+      ]
+    },
+    "head": {
+      "at": [13, 12],
+      "rows": [
+        ".kk.........kk..",
+        ".kpk.......kpk..",
+        ".kookkkkkkkook..",
+        "kooooooooooooook",
+        "koooooooooooooOk",
+        "koeeoooooooooOOk",
+        "koewoooooooooOOk",
+        "kwwoooooooooOOOk",
+        "kpwwoooooooOOOOk",
+        "kwwwoooooOOOOOk.",
+        ".kwwwoooOOOOOk..",
+        "..kkkkkkkkkkk..."
+      ]
+    },
+    "frontArm": {
+      "at": [15, 25],
+      "rows": [
+        "kok",
+        "kok",
+        "kok",
+        "kwk",
+        "kkk"
+      ]
+    }
+  },
+  "overlays": {
+    "eyesClosed": {
+      "at": [15, 17],
+      "rows": [
+        "oo",
+        "kk"
+      ]
+    }
+  }
+}

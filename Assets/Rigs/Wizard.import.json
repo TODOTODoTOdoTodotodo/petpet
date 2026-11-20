@@ -1,0 +1,45 @@
+{
+  "name": "Wizard",
+  "skill": "flame_rocket",
+  "facing": "east",
+  "source": "Assets/Sources/DungeonTilesetII/wizzard_m",
+  "frame": [
+    16,
+    28
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "files": [
+        "wizzard_m_idle_anim_f0.png",
+        "wizzard_m_idle_anim_f1.png",
+        "wizzard_m_idle_anim_f2.png",
+        "wizzard_m_idle_anim_f3.png"
+      ]
+    },
+    "Walking": {
+      "files": [
+        "wizzard_m_run_anim_f0.png",
+        "wizzard_m_run_anim_f1.png",
+        "wizzard_m_run_anim_f2.png",
+        "wizzard_m_run_anim_f3.png"
+      ]
+    },
+    "Jump": {
+      "files": [
+        "wizzard_m_run_anim_f1.png"
+      ]
+    }
+  },
+  "intervals": {
+    "idle": 0.12,
+    "walk": 0.1
+  },
+  "credit": {
+    "author": "0x72 (Robert)",
+    "title": "16x16 DungeonTileset II",
+    "url": "https://0x72.itch.io/dungeontileset-ii",
+    "license": "CC0 1.0"
+  }
+}

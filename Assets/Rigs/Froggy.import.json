@@ -1,0 +1,40 @@
+{
+  "name": "Froggy",
+  "skill": "big_jump",
+  "facing": "west",
+  "source": "Assets/Sources/SunnyLand/Frog",
+  "frame": [
+    35,
+    32
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "file": "idle.png"
+    },
+    "Walking": {
+      "file": "jump.png",
+      "frames": [
+        0,
+        1
+      ]
+    },
+    "Jump": {
+      "file": "jump.png",
+      "frames": [
+        1
+      ]
+    }
+  },
+  "intervals": {
+    "idle": 0.15,
+    "walk": 0.18
+  },
+  "credit": {
+    "author": "Luis Zuno (ansimuz)",
+    "title": "Sunny Land",
+    "url": "https://ansimuz.itch.io/sunny-land-pixel-game-art",
+    "license": "CC0 1.0"
+  }
+}

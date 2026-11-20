@@ -1,0 +1,65 @@
+{
+  "name": "Foxy",
+  "skill": "big_jump",
+  "facing": "east",
+  "source": "Assets/Sources/SunnyLand/Foxy",
+  "frame": [
+    33,
+    32
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "file": "idle.png"
+    },
+    "Walking": {
+      "file": "run.png"
+    },
+    "Jump": {
+      "file": "jump.png",
+      "frames": [
+        0
+      ]
+    },
+    "Climb": {
+      "file": "climb.png",
+      "direction": "north"
+    },
+    "Hang": {
+      "file": "climb.png",
+      "frames": [
+        0,
+        2
+      ],
+      "bob": [
+        0,
+        1,
+        1,
+        0
+      ],
+      "direction": "north"
+    },
+    "Sleep": {
+      "file": "crouch.png",
+      "frames": [
+        2
+      ]
+    },
+    "roll_attack": {
+      "file": "Roll.png"
+    }
+  },
+  "intervals": {
+    "idle": 0.15,
+    "walk": 0.08,
+    "climb": 0.12,
+    "act": 0.08
+  },
+  "credit": {
+    "author": "Luis Zuno (ansimuz)",
+    "title": "Sunny Land",
+    "url": "https://ansimuz.itch.io/sunny-land-pixel-game-art",
+    "license": "CC0 1.0"
+  }
+}

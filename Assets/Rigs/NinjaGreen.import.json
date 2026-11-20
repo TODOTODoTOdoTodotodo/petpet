@@ -1,0 +1,76 @@
+{
+  "name": "NinjaGreen",
+  "skill": "slash_jump",
+  "facing": "west",
+  "source": "Assets/Sources/NinjaAdventure/NinjaGreen",
+  "frame": [
+    32,
+    32
+  ],
+  "crop": [
+    5,
+    7,
+    22,
+    20
+  ],
+  "scale": 2,
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "file": "Idle.png",
+      "column": 2
+    },
+    "Walking": {
+      "file": "Walk.png",
+      "column": 2
+    },
+    "Jump": {
+      "file": "Jump.png",
+      "column": 2,
+      "frames": [
+        1
+      ]
+    },
+    "swing_attack": {
+      "file": "Attack.png",
+      "column": 2
+    },
+    "Climb": {
+      "file": "Climb.png",
+      "column": 0,
+      "direction": "north"
+    },
+    "Hang": {
+      "file": "Climb.png",
+      "column": 0,
+      "frames": [
+        0,
+        2
+      ],
+      "bob": [
+        0,
+        1,
+        1,
+        0
+      ],
+      "direction": "north"
+    },
+    "Sleep": {
+      "file": "Dead.png",
+      "column": 0
+    }
+  },
+  "intervals": {
+    "idle": 0.15,
+    "walk": 0.12,
+    "climb": 0.15,
+    "act": 0.08
+  },
+  "credit": {
+    "author": "Pixel-boy and AAA",
+    "title": "Ninja Adventure",
+    "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+    "license": "CC0 1.0"
+  }
+}

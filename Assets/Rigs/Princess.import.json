@@ -1,0 +1,61 @@
+{
+  "name": "Princess",
+  "skill": "big_jump",
+  "facing": "west",
+  "source": "Assets/Sources/NinjaAdventure/Princess",
+  "frame": [
+    16,
+    16
+  ],
+  "scale": 2,
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "file": "Idle.png",
+      "column": 2
+    },
+    "Walking": {
+      "file": "Walk.png",
+      "column": 2
+    },
+    "Jump": {
+      "file": "Jump.png",
+      "column": 2
+    },
+    "swing_attack": {
+      "file": "Attack.png",
+      "column": 2
+    },
+    "Climb": {
+      "file": "Walk.png",
+      "column": 1,
+      "direction": "north"
+    },
+    "Hang": {
+      "file": "Idle.png",
+      "column": 1,
+      "bob": [
+        0,
+        1,
+        1,
+        0
+      ],
+      "direction": "north"
+    },
+    "Sleep": {
+      "file": "Dead.png"
+    }
+  },
+  "intervals": {
+    "walk": 0.15,
+    "climb": 0.15,
+    "act": 0.3
+  },
+  "credit": {
+    "author": "Pixel-boy and AAA",
+    "title": "Ninja Adventure",
+    "url": "https://pixel-boy.itch.io/ninja-adventure-asset-pack",
+    "license": "CC0 1.0"
+  }
+}

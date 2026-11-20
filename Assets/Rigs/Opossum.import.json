@@ -1,0 +1,36 @@
+{
+  "name": "Opossum",
+  "skill": "big_jump",
+  "facing": "west",
+  "source": "Assets/Sources/SunnyLand/Opossum",
+  "frame": [
+    36,
+    28
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "file": "run.png",
+      "frames": [
+        1
+      ]
+    },
+    "Walking": {
+      "file": "run.png"
+    }
+  },
+  "intervals": {
+    "walk": 0.08
+  },
+  "hatAnchor": [
+    6,
+    -2
+  ],
+  "credit": {
+    "author": "Luis Zuno (ansimuz)",
+    "title": "Sunny Land",
+    "url": "https://ansimuz.itch.io/sunny-land-pixel-game-art",
+    "license": "CC0 1.0"
+  }
+}

@@ -5,3 +5,13 @@ pet_debug.log
 *.zip
 *.rar
 *.dmg
+# 출처·재배포 허락 미확인 캐릭터 (scripts/private-skins.txt). 로컬에만 둠
+Assets/Skins/Boy/
+Assets/Skins/Girl/
+Assets/Skins/Goblin/
+Assets/Skins/Radish/
+Assets/Rigs/Boy.hang.json
+Assets/Rigs/Girl.hang.json
+Assets/Rigs/Goblin.hang.json
+Assets/Rigs/Radish.hang.json
+dmg_stage/

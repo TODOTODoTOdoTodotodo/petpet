@@ -1,0 +1,45 @@
+{
+  "name": "Elf",
+  "skill": "big_jump",
+  "facing": "east",
+  "source": "Assets/Sources/DungeonTilesetII/elf_f",
+  "frame": [
+    16,
+    28
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "files": [
+        "elf_f_idle_anim_f0.png",
+        "elf_f_idle_anim_f1.png",
+        "elf_f_idle_anim_f2.png",
+        "elf_f_idle_anim_f3.png"
+      ]
+    },
+    "Walking": {
+      "files": [
+        "elf_f_run_anim_f0.png",
+        "elf_f_run_anim_f1.png",
+        "elf_f_run_anim_f2.png",
+        "elf_f_run_anim_f3.png"
+      ]
+    },
+    "Jump": {
+      "files": [
+        "elf_f_run_anim_f1.png"
+      ]
+    }
+  },
+  "intervals": {
+    "idle": 0.12,
+    "walk": 0.1
+  },
+  "credit": {
+    "author": "0x72 (Robert)",
+    "title": "16x16 DungeonTileset II",
+    "url": "https://0x72.itch.io/dungeontileset-ii",
+    "license": "CC0 1.0"
+  }
+}

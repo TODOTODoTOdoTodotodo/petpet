@@ -1,0 +1,45 @@
+{
+  "name": "Dwarf",
+  "skill": "pole_vault",
+  "facing": "east",
+  "source": "Assets/Sources/DungeonTilesetII/dwarf_m",
+  "frame": [
+    16,
+    28
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "files": [
+        "dwarf_m_idle_anim_f0.png",
+        "dwarf_m_idle_anim_f1.png",
+        "dwarf_m_idle_anim_f2.png",
+        "dwarf_m_idle_anim_f3.png"
+      ]
+    },
+    "Walking": {
+      "files": [
+        "dwarf_m_run_anim_f0.png",
+        "dwarf_m_run_anim_f1.png",
+        "dwarf_m_run_anim_f2.png",
+        "dwarf_m_run_anim_f3.png"
+      ]
+    },
+    "Jump": {
+      "files": [
+        "dwarf_m_run_anim_f1.png"
+      ]
+    }
+  },
+  "intervals": {
+    "idle": 0.12,
+    "walk": 0.1
+  },
+  "credit": {
+    "author": "0x72 (Robert)",
+    "title": "16x16 DungeonTileset II",
+    "url": "https://0x72.itch.io/dungeontileset-ii",
+    "license": "CC0 1.0"
+  }
+}

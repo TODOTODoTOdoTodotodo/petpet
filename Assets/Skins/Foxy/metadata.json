@@ -1,0 +1,82 @@
+{
+  "deskpet" : {
+    "credit" : {
+      "author" : "Luis Zuno (ansimuz)",
+      "license" : "CC0 1.0",
+      "title" : "Sunny Land",
+      "url" : "https://ansimuz.itch.io/sunny-land-pixel-game-art"
+    },
+    "generator" : "SpriteForge",
+    "import" : "Assets/Rigs/Foxy.import.json",
+    "intervals" : {
+      "act" : 0.080000000000000002,
+      "climb" : 0.12,
+      "idle" : 0.14999999999999999,
+      "walk" : 0.080000000000000002
+    },
+    "skill" : "big_jump"
+  },
+  "states" : [
+    {
+      "frames" : {
+        "animations" : {
+          "Climb" : {
+            "north" : [
+              "animations/Climb/north/frame_000.png",
+              "animations/Climb/north/frame_001.png",
+              "animations/Climb/north/frame_002.png",
+              "animations/Climb/north/frame_003.png"
+            ]
+          },
+          "Hang" : {
+            "north" : [
+              "animations/Hang/north/frame_000.png",
+              "animations/Hang/north/frame_001.png",
+              "animations/Hang/north/frame_002.png",
+              "animations/Hang/north/frame_003.png"
+            ]
+          },
+          "Idle" : {
+            "east" : [
+              "animations/Idle/east/frame_000.png",
+              "animations/Idle/east/frame_001.png",
+              "animations/Idle/east/frame_002.png",
+              "animations/Idle/east/frame_003.png"
+            ]
+          },
+          "Jump" : {
+            "east" : [
+              "animations/Jump/east/frame_000.png"
+            ]
+          },
+          "roll_attack" : {
+            "east" : [
+              "animations/roll_attack/east/frame_000.png",
+              "animations/roll_attack/east/frame_001.png",
+              "animations/roll_attack/east/frame_002.png",
+              "animations/roll_attack/east/frame_003.png"
+            ]
+          },
+          "Sleep" : {
+            "east" : [
+              "animations/Sleep/east/frame_000.png"
+            ]
+          },
+          "Walking" : {
+            "east" : [
+              "animations/Walking/east/frame_000.png",
+              "animations/Walking/east/frame_001.png",
+              "animations/Walking/east/frame_002.png",
+              "animations/Walking/east/frame_003.png",
+              "animations/Walking/east/frame_004.png",
+              "animations/Walking/east/frame_005.png"
+            ]
+          }
+        },
+        "rotations" : {
+          "east" : "rotations/east.png"
+        }
+      }
+    }
+  ]
+}

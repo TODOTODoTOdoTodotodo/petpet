@@ -1,0 +1,67 @@
+{
+  "deskpet" : {
+    "generator" : "SpriteForge",
+    "rig" : "Assets\/Rigs\/Bolt.rig.json",
+    "skill" : "flame_rocket"
+  },
+  "states" : [
+    {
+      "frames" : {
+        "animations" : {
+          "Hang" : {
+            "west" : [
+              "animations\/Hang\/west\/frame_000.png",
+              "animations\/Hang\/west\/frame_001.png",
+              "animations\/Hang\/west\/frame_002.png",
+              "animations\/Hang\/west\/frame_003.png"
+            ]
+          },
+          "Idle" : {
+            "west" : [
+              "animations\/Idle\/west\/frame_000.png",
+              "animations\/Idle\/west\/frame_001.png",
+              "animations\/Idle\/west\/frame_002.png",
+              "animations\/Idle\/west\/frame_003.png",
+              "animations\/Idle\/west\/frame_004.png",
+              "animations\/Idle\/west\/frame_005.png"
+            ]
+          },
+          "Jump" : {
+            "west" : [
+              "animations\/Jump\/west\/frame_000.png"
+            ]
+          },
+          "Sleep" : {
+            "west" : [
+              "animations\/Sleep\/west\/frame_000.png",
+              "animations\/Sleep\/west\/frame_001.png"
+            ]
+          },
+          "swing_attack" : {
+            "west" : [
+              "animations\/swing_attack\/west\/frame_000.png",
+              "animations\/swing_attack\/west\/frame_001.png",
+              "animations\/swing_attack\/west\/frame_002.png",
+              "animations\/swing_attack\/west\/frame_003.png"
+            ]
+          },
+          "Walking" : {
+            "west" : [
+              "animations\/Walking\/west\/frame_000.png",
+              "animations\/Walking\/west\/frame_001.png",
+              "animations\/Walking\/west\/frame_002.png",
+              "animations\/Walking\/west\/frame_003.png",
+              "animations\/Walking\/west\/frame_004.png",
+              "animations\/Walking\/west\/frame_005.png",
+              "animations\/Walking\/west\/frame_006.png",
+              "animations\/Walking\/west\/frame_007.png"
+            ]
+          }
+        },
+        "rotations" : {
+          "west" : "rotations\/west.png"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# 공개 배포에서 빼는 캐릭터 (출처·재배포 허락 미확인). 한 줄에 하나
+# 저장소에서도 추적하지 않음(.gitignore). 개인 빌드는 ./scripts/package_app.sh --with-private
+Boy
+Girl
+Goblin
+Radish

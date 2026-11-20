@@ -1,0 +1,49 @@
+{
+  "deskpet" : {
+    "credit" : {
+      "author" : "0x72 (Robert)",
+      "license" : "CC0 1.0",
+      "title" : "16x16 DungeonTileset II",
+      "url" : "https://0x72.itch.io/dungeontileset-ii"
+    },
+    "generator" : "SpriteForge",
+    "import" : "Assets/Rigs/BigDemon.import.json",
+    "intervals" : {
+      "idle" : 0.12,
+      "walk" : 0.10000000000000001
+    },
+    "skill" : "flame_rocket"
+  },
+  "states" : [
+    {
+      "frames" : {
+        "animations" : {
+          "Idle" : {
+            "east" : [
+              "animations/Idle/east/frame_000.png",
+              "animations/Idle/east/frame_001.png",
+              "animations/Idle/east/frame_002.png",
+              "animations/Idle/east/frame_003.png"
+            ]
+          },
+          "Jump" : {
+            "east" : [
+              "animations/Jump/east/frame_000.png"
+            ]
+          },
+          "Walking" : {
+            "east" : [
+              "animations/Walking/east/frame_000.png",
+              "animations/Walking/east/frame_001.png",
+              "animations/Walking/east/frame_002.png",
+              "animations/Walking/east/frame_003.png"
+            ]
+          }
+        },
+        "rotations" : {
+          "east" : "rotations/east.png"
+        }
+      }
+    }
+  ]
+}

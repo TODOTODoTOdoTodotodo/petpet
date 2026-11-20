@@ -1,0 +1,46 @@
+{
+  "name": "MaskDude",
+  "skill": "big_jump",
+  "facing": "east",
+  "source": "Assets/Sources/PixelAdventure1/Mask Dude",
+  "frame": [
+    32,
+    32
+  ],
+  "canvas": 48,
+  "rest": "Idle",
+  "animations": {
+    "Idle": {
+      "file": "Idle (32x32).png"
+    },
+    "Walking": {
+      "file": "Run (32x32).png"
+    },
+    "Jump": {
+      "file": "Jump (32x32).png"
+    },
+    "Hang": {
+      "file": "Fall (32x32).png",
+      "bob": [
+        0,
+        1,
+        1,
+        0
+      ]
+    },
+    "Climb": {
+      "file": "Wall Jump (32x32).png"
+    }
+  },
+  "intervals": {
+    "idle": 0.06,
+    "walk": 0.06,
+    "climb": 0.1
+  },
+  "credit": {
+    "author": "Pixel Frog",
+    "title": "Pixel Adventure",
+    "url": "https://pixelfrog-assets.itch.io/pixel-adventure-1",
+    "license": "CC0 1.0"
+  }
+}

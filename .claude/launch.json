@@ -1,0 +1,80 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "viewshift-dev",
+      "runtimeExecutable": "java",
+      "runtimeArgs": [
+        "-cp",
+        "/Users/HH191_1/Documents/viewshift/build/classes/java/main:/Users/HH191_1/Documents/viewshift/build/resources/main",
+        "com.viewshift.cli.Main",
+        "serve",
+        "--port",
+        "8796",
+        "--out",
+        "/private/tmp/claude-502/-Users-HH191-1-Documents-private/d9eb35cf-5643-4bac-a174-8d5840e200d1/scratchpad/uicheck/renders",
+        "--ledger",
+        "/private/tmp/claude-502/-Users-HH191-1-Documents-private/d9eb35cf-5643-4bac-a174-8d5840e200d1/scratchpad/uicheck/ledger"
+      ],
+      "port": 8796
+    },
+    {
+      "name": "longpress-prototype",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-I",
+        "/Users/HH191_1/Documents/image-enhancer/prototypes/longpress/server.py",
+        "8765"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "enhancer-jar",
+      "runtimeExecutable": "java",
+      "runtimeArgs": [
+        "-jar",
+        "/Users/HH191_1/Documents/image-enhancer/build/libs/image-enhancer-1.0.0.jar",
+        "serve",
+        "--port",
+        "8799"
+      ],
+      "port": 8799
+    },
+    {
+      "name": "f3label",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-I",
+        "/Users/HH191_1/Documents/image-enhancer/prototypes/f3label/server.py",
+        "--images",
+        "/private/tmp/claude-502/-Users-HH191-1-Documents-private/08dfab9a-cb7e-4266-a0bb-8d255d0680db/scratchpad/f3sample/images",
+        "--out",
+        "/Users/HH191_1/Documents/image-enhancer/prototypes/f3label/results",
+        "--candidates",
+        "/private/tmp/claude-502/-Users-HH191-1-Documents-private/08dfab9a-cb7e-4266-a0bb-8d255d0680db/scratchpad/f3sample/candidates.txt",
+        "--port",
+        "8770"
+      ],
+      "port": 8770
+    },
+    {
+      "name": "calibrate-label",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-I",
+        "/Users/HH191_1/Documents/image-enhancer/prototypes/f3label/server.py",
+        "--scheme",
+        "calibrate",
+        "--images",
+        "/private/tmp/claude-502/-Users-HH191-1-Documents-private/08dfab9a-cb7e-4266-a0bb-8d255d0680db/scratchpad/calib/images",
+        "--out",
+        "/Users/HH191_1/Documents/image-enhancer/prototypes/f3label/results/calibrate",
+        "--candidates",
+        "/private/tmp/claude-502/-Users-HH191-1-Documents-private/08dfab9a-cb7e-4266-a0bb-8d255d0680db/scratchpad/calib/candidates.txt",
+        "--port",
+        "8771"
+      ],
+      "port": 8771
+    }
+  ]
+}
