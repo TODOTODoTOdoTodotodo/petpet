@@ -135,6 +135,19 @@ private/
 │           ├── SkillTrailNode.swift   # 스킬 도약 입자 (흙먼지, 불꽃, 칼바람)
 │           ├── DotArt.swift           # 텍스트 도트 → 텍스처·메뉴 아이콘
 │           └── StageDirector.swift    # 모니터 구성에 맞춰 무대 관리, 공통 그리기 목록을 무대에 넘김 (PetStage)
+│   └── Windows/                   # 윈도우 껍데기 (Win32, 2단계 진행 중). 맥 밖에서만 컴파일
+│       ├── main.swift                 # DPI 인식, 숨은 최상위 창, 틱·메시지를 함께 기다리는 루프
+│       ├── App/
+│       │   ├── WindowsApp.swift       # 공통 조각 연결, 60Hz 진행, 트레이 명령, 껍데기 쪽 설정, --smoke 보고서
+│       │   ├── FrameTimer.swift       # 고해상도 대기 타이머 (SetTimer는 31ms로 늘어남)
+│       │   ├── WindowsHostSenses.swift # GetCursorPos·GetLastInputInfo·SetCursorPos (키 수·마이크는 4단계)
+│       │   └── WindowsStorage.swift   # %APPDATA%\DeskPet(설정·도감), %LOCALAPPDATA%\DeskPet\Logs, DESKPET_DATA_DIR
+│       ├── World/
+│       │   ├── WindowsDesktop.swift   # EnumDisplayMonitors(작업 영역)·EnumWindows + DWM 프레임·맨 앞 앱
+│       │   └── WindowsCoordinates.swift # 가상 화면(왼쪽 위, 아래 +y) ↔ 공통 좌표(왼쪽 아래, 위 +y)
+│       ├── Menu/TrayMenu.swift        # 트레이 아이콘, MenuNode → HMENU, 메시지 상자 대화(이름 입력은 3단계)
+│       ├── Skin/WinSprite.swift       # PNGDecoder → 미리 곱한 BGRA
+│       └── Stage/HeadlessStage.swift  # 2c 전까지: 그리기 목록만 만들고 화면에는 안 그림
 ├── Assets/Skins/                  # 캐릭터 23종 (공개 19종 + 로컬 전용 Boy·Girl·Goblin·Radish), Nabi·Bolt는 SpriteForge 생성물
 ├── Assets/Rigs/                   # SpriteForge 원본: 리그(<이름>.rig.json), 원본 스킨 매달리기(<스킨>.hang.json), 시트 가져오기(<이름>.import.json)
 ├── Assets/Sources/                # 가져온 무료 에셋 원본 줄 PNG와 출처·라이선스 메모 (PixelAdventure1, SunnyLand, NinjaAdventure, DungeonTilesetII)
@@ -144,7 +157,7 @@ private/
 │   ├── package_app.sh             # Release 빌드, ad-hoc 서명, DeskPet.app·.dmg·.zip 생성 (기본 공개용, --with-private)
 │   ├── verify.sh                  # Core 홀로 컴파일·맥 전용 import 금지 확인 + 모델 검증 실행 (맥 밖에서는 공통 코드와 검사만)
 │   └── checks/                    # 검증 시나리오 (스킨, 월드, 행동, 장시간 무작위, 잠·클릭·인사·일정). MacSkinChecks만 맥 전용
-├── .github/workflows/core-portability.yml # 공통 코드를 Windows·Linux에서 빌드하고 검사 (윈도우 이식 1단계)
+├── .github/workflows/core-portability.yml # Windows(DeskPet.exe 빌드·검사·연기 시험)·Linux(Core 빌드·검사)
 ├── install.sh                     # 터미널 한 줄 설치·지우기 (Releases의 DeskPet.zip)
 ├── Package.swift
 └── run.sh                         # DeskPet.app 실행
@@ -268,6 +281,7 @@ tail -f ~/Library/Logs/DeskPet/pet_debug.log
   * 1단계: GitHub Actions `Core portability`가 Windows·Linux에서 `swift build`(DeskPetCore)와 `scripts/verify.sh`를 돌린다. 맥 밖에서는 스킨을 공통 `PNGDecoder`로 읽고, SpriteForge 일치 검사는 건너뛴다.
   * 맥에서 윈도우와 같은 스킨 경로를 돌려 보려면 검사를 `-D PORTABLE_CHECKS`로 컴파일한다. 맥 검사는 `PNGDecoder`가 모든 스킨 PNG를 Core Graphics와 같은 픽셀로 읽는지도 확인한다.
   * 2a: 시계(`HabitatLoop`)·끌기 판정·설정·그리기 목록·메뉴 데이터가 Core에 있다. 맥 껍데기는 읽기(`DesktopSource`·`HostSenses`)·그리기(`PetStage`)·메뉴 렌더링·대화 상자·`UserDefaults`만 맡는다. 윈도우판은 같은 약속을 Win32로 구현한다(설계 명세 5.4).
+  * 2b: 윈도우에서는 `swift build`가 `DeskPet.exe`(Core + Windows)를 만든다. CI 연기 시험은 메모장을 띄우고 `DeskPet.exe --smoke 8 --report smoke.json`을 돌려 모니터·창 목록·펫·트레이·틱 수를 확인한다(보고서와 로그는 아티팩트 `windows-smoke`). 아직 화면에 그리지 않는다(2c).
 * XCTest는 Command Line Tools만 설치된 환경에서 쓸 수 없어 `scripts/checks/` 실행 파일로 검증한다. `swift build` 때 나오는 `could not determine XCTest paths` 경고는 같은 이유이며 빌드에 영향 없음.
 
 ---

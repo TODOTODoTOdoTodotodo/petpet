@@ -2,7 +2,7 @@
 import PackageDescription
 
 // Sources/DeskPet/Core: 운영체제를 모르는 펫 행동·월드 코드 (Foundation만 씀)
-// Sources/DeskPet/Mac: macOS 껍데기 (AppKit·SpriteKit). 윈도우판은 Windows 폴더를 같은 방식으로 붙임
+// Sources/DeskPet/Mac: macOS 껍데기 (AppKit·SpriteKit). Sources/DeskPet/Windows: 윈도우 껍데기 (Win32)
 #if os(macOS)
 let package = Package(
     name: "DeskPet",
@@ -30,6 +30,24 @@ let package = Package(
         .executableTarget(
             name: "SpriteForge",
             path: "Tools/SpriteForge"
+        )
+    ]
+)
+#elseif os(Windows)
+// 윈도우판: 공통 코드 + Win32 껍데기 (2단계 진행 중, Controller/WINDOWS_PORT.md)
+let package = Package(
+    name: "DeskPet",
+    products: [
+        .executable(
+            name: "DeskPet",
+            targets: ["DeskPet"]
+        )
+    ],
+    targets: [
+        .executableTarget(
+            name: "DeskPet",
+            path: "Sources/DeskPet",
+            sources: ["Core", "Windows"]
         )
     ]
 )

@@ -32,6 +32,36 @@ jobs:
       - name: Checks
         shell: bash
         run: scripts/verify.sh
+      # 연기 시험: 메모장을 띄우고 DeskPet.exe를 8초 돌려, 모니터·창 목록·펫·트레이 보고서를 확인함
+      - name: Smoke test (DeskPet.exe)
+        shell: pwsh
+        timeout-minutes: 3
+        env:
+          DESKPET_DATA_DIR: ${{ runner.temp }}\deskpet
+        run: |
+          $bin = (swift build --show-bin-path).Trim()
+          Start-Process notepad
+          Start-Sleep -Seconds 3
+          & "$bin\DeskPet.exe" --smoke 8 --report smoke.json
+          if (-not (Test-Path smoke.json)) { throw "no smoke report (exit code $LASTEXITCODE)" }
+          Get-Content smoke.json
+          $r = Get-Content smoke.json -Raw | ConvertFrom-Json
+          if ($r.displays.Count -lt 1) { throw "no displays" }
+          if (-not ($r.windows | Where-Object { $_.owner -like '*notepad*' })) { throw "notepad window not listed" }
+          if ($r.pets.Count -lt 1) { throw "no pets" }
+          if ($r.drawings -lt 1) { throw "no drawings composed" }
+          # 8초 동안 60Hz면 약 480틱. 타이머 간격이 늘어나면 걸림
+          if ($r.ticks -lt 380) { throw "too few ticks: $($r.ticks) in 8s" }
+          Write-Host "tray icon shown: $($r.tray)"
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-smoke
+          path: |
+            smoke.json
+            ${{ runner.temp }}\deskpet\Logs\pet_debug.log
+          if-no-files-found: ignore
 
   linux:
     name: Linux (Core build + checks)

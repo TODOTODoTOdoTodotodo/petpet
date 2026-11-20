@@ -182,7 +182,7 @@
 | 묶음 | 내용 | CI 확인 | 추정 |
 |---|---|---|---|
 | 2a ✅ | 10.1 Core 올리기 (맥에서) | 맥 검사 + 맥 앱 동작 그대로 + Windows·Linux 잡 | 완료 (10.6) |
-| 2b | exe 뼈대, 트레이 메뉴(끄기), `WindowsDesktop` | `DeskPet.exe --smoke 10`이 모니터·창 목록을 JSON으로 남기고 끝남. 러너에서 메모장을 띄워 그 창이 목록에 있는지 확인 | 3~4일 |
+| 2b ✅ | exe 뼈대, 트레이 메뉴(끄기), `WindowsDesktop` | `DeskPet.exe --smoke 8`이 모니터·창 목록을 JSON으로 남기고 끝남. 러너에서 메모장을 띄워 그 창이 목록에 있는지 확인 | 완료 (10.7) |
 | 2c | 오버레이 + 합성기, 작업 표시줄 위 걷기 | 연기 시험 중 화면을 캡처해 아티팩트로 올림 (펫이 보이는지 눈으로 확인) | 4~5일 |
 | 2d | 창 윗변·벽, 창 따라가기, 클릭·끌기·던지기, 펫 우클릭 메뉴, 설정 JSON | 연기 시험이 메모장 창을 옮기고 펫이 따라갔는지 JSON으로 확인 | 4~5일 |
 - 러너 화면 캡처와 창 옮기기는 PowerShell(`System.Drawing`, `SetWindowPos`)로 한다. 러너가 화면 없는 상태면 캡처 단계만 건너뛴다.
@@ -219,3 +219,29 @@
   - 공개 구성 앱을 다시 빌드해 실행했다. 저장된 펫 구성(4마리)·도감(22개)·두 모니터·일정 권한을 그대로 읽고, 쫓기·던지기·결투가 돈다(로그 확인).
   - 메뉴바·우클릭 메뉴를 눌러 보는 확인은 사용자가 한다.
 - **CI:** `windows-port/phase2a`(run 44692017944)에서 Windows·Linux 모두 `swift build`와 검사 664/664가 통과했다. 1단계 605개에 2a 검사 59개가 더해졌다. 새 Core 코드도 고치지 않고 윈도우 Foundation에서 컴파일됐다.
+
+### 10.7 2b 결과 (2026-11-20)
+- **빌드:** 윈도우에서 `swift build`가 `DeskPet.exe`(Core + `Sources/DeskPet/Windows`)를 만든다. 리눅스는 지금처럼 `DeskPetCore`만 빌드한다.
+  - 콘솔 창 없이 띄우는 `/SUBSYSTEM:WINDOWS`는 포장 단계로 미뤘다. 연기 시험이 콘솔 출력을 쓰기 때문이다.
+- **새 파일 (`Sources/DeskPet/Windows`, 약 750줄):**
+  - `main.swift`: DPI 인식, 숨은 최상위 창, 틱과 창 메시지를 함께 기다리는 루프.
+  - `App/FrameTimer.swift`: 고해상도 대기 타이머(`CREATE_WAITABLE_TIMER_HIGH_RESOLUTION`) + `MsgWaitForMultipleObjectsEx`.
+  - `App/WindowsApp.swift`: 설정·스킨·펫·도감·메뉴·시계를 2a의 공통 조각으로 묶는다. 트레이 명령을 처리하고 `--smoke` 보고서를 쓴다.
+  - `World/WindowsDesktop.swift`: 모니터(작업 영역), 앞→뒤 창 목록(DWM 확장 프레임, 가려진 가상 데스크톱 창·도구 창·작업 표시줄 제외), 맨 앞 앱(실행 파일 이름).
+  - `World/WindowsCoordinates.swift`: 좌표를 뒤집는다.
+  - `Menu/TrayMenu.swift`: 트레이 아이콘, `MenuNode` → `HMENU`, 하위 메뉴 열림 알림(`WM_INITMENUPOPUP`), 메시지 상자 확인 창.
+  - `App/WindowsStorage.swift`·`WindowsHostSenses.swift`, `Skin/WinSprite.swift`, `Stage/HeadlessStage.swift`.
+- **연기 시험 (CI, 러너 화면 1024×768, 작업 표시줄 48px):**
+  - 모니터 1개를 읽었다. 작업 영역은 아래 48px를 뺀 값이다.
+  - 창 목록에 메모장·터미널이 맞는 크기로 들어왔고, 맨 앞 앱은 `notepad.exe`였다.
+  - 트레이 아이콘이 떴고, 스킨 19종을 읽었고, 메뉴는 30줄이다.
+  - Nabi가 등장해 터미널 창 윗변(y=716)에 내려앉고 인사한 뒤 잠들었다. 러너에는 입력이 없어서다.
+  - 8초에 443틱이다. 처음에는 290틱(약 36Hz)이었다. `SetTimer` 16ms가 기본 타이머 간격(15.6ms)에 맞춰 31ms로 늘어난 탓이다. `timeBeginPeriod(1)`로는 바뀌지 않아(288틱), 고해상도 대기 타이머로 바꿨다. 시작 시간(스킨 읽기)이 포함된 수라 진행 중에는 60Hz에 가깝다.
+- **좌표 단위(잠정):**
+  - 윈도우는 물리 픽셀을 그대로 공통 좌표 단위로 쓰고, 모니터 배율(DPI/96)을 `backingScale`에 담는다.
+  - 고배율 모니터에서 펫이 작아 보이는 문제는 2c에서 펫 배율에 모니터 배율을 곱해 맞춘다.
+- **아직 없는 것:**
+  - 화면에 그리기(2c), 펫 위 클릭·끌기(2d).
+  - 이름 짓기 입력 창(3단계, 지금은 건너뜀).
+  - 펫 모양 트레이 아이콘(포장 단계, 지금은 기본 앱 아이콘).
+  - 일정 항목은 메뉴에 보이지만 동작하지 않는다(보류).
