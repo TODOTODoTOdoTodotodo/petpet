@@ -3,8 +3,6 @@ import WinSDK
 
 // 모니터마다 배율이 달라도 실제 픽셀로 좌표를 받음 (Per-Monitor DPI Aware v2)
 _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT(bitPattern: -4))
-// 기본 타이머 간격(약 15.6ms)에서는 16ms 타이머가 31ms로 늘어남. 이 프로세스만 1ms 간격으로
-_ = timeBeginPeriod(1)
 
 /// 숨은 창의 메시지를 앱으로 넘기고, 앱이 처리하지 않은 메시지는 기본 처리
 let windowProcedure: WNDPROC = { window, message, wParam, lParam in
@@ -34,8 +32,19 @@ let app = WindowsApp(window: host, options: LaunchOptions(arguments: CommandLine
 WindowsApp.current = app
 app.start()
 
+// 60Hz 진행: SetTimer는 기본 타이머 간격(약 15.6ms)에 묶여 16ms가 31ms로 늘어나므로,
+// 고해상도 대기 타이머를 메시지와 함께 기다림
+let frameTimer = FrameTimer(milliseconds: 16)
 var message = MSG()
-while GetMessageW(&message, nil, 0, 0) {
-    _ = TranslateMessage(&message)
-    _ = DispatchMessageW(&message)
+var running = true
+while running {
+    if frameTimer.waitForTickOrMessage() { app.tick() }
+    while PeekMessageW(&message, nil, 0, 0, UINT(PM_REMOVE)) {
+        if message.message == UINT(WM_QUIT) {
+            running = false
+            break
+        }
+        _ = TranslateMessage(&message)
+        _ = DispatchMessageW(&message)
+    }
 }

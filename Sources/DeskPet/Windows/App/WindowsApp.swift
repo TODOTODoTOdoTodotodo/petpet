@@ -27,14 +27,12 @@ struct LaunchOptions {
 
 /// This object is responsible for the Windows app: wiring the shared pieces (settings, skins, pets, collection,
 /// status menu, habitat loop) to the Windows readers, the tray menu and a hidden message window,
-/// driving the loop from a 60Hz timer, and applying the settings only the shell owns.
+/// stepping the loop on each 60Hz frame tick, and applying the settings only the shell owns.
 final class WindowsApp {
     /// 숨은 메시지 창의 클래스 이름 (창 목록에서 제외)
     static let windowClass = "DeskPetHost"
     /// 창 프로시저가 찾아오는 앱 (C 콜백은 문맥을 잡을 수 없음)
     static var current: WindowsApp?
-
-    private static let tickTimer: UINT_PTR = 1
 
     private let window: HWND
     private let options: LaunchOptions
@@ -53,6 +51,7 @@ final class WindowsApp {
     private let taskbarCreated = RegisterWindowMessageW("TaskbarCreated".wide)
     private let startedAt = ProcessInfo.processInfo.systemUptime
     private var ticks = 0
+    private var isQuitting = false
 
     init(window: HWND, options: LaunchOptions) {
         self.window = window
@@ -104,14 +103,11 @@ final class WindowsApp {
 
         log(tray.show(tip: "DeskPet") ? "🔔 tray icon shown" : "⚠️ tray icon failed")
         loop.tick(now: ProcessInfo.processInfo.systemUptime)
-        _ = SetTimer(window, Self.tickTimer, 16, nil)
     }
 
     /// 창 메시지 처리. 처리하지 않으면 nil (기본 처리로 넘김)
     func handle(_ message: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT? {
         switch message {
-        case UINT(WM_TIMER) where wParam == WPARAM(Self.tickTimer):
-            tick()
         case TrayMenu.callbackMessage:
             let event = UINT(truncatingIfNeeded: lParam & 0xFFFF)
             if event == UINT(WM_RBUTTONUP) || event == UINT(WM_LBUTTONUP) {
@@ -134,7 +130,9 @@ final class WindowsApp {
         return 0
     }
 
-    private func tick() {
+    /// 60Hz마다 메시지 루프가 부름
+    func tick() {
+        guard !isQuitting else { return }
         let now = ProcessInfo.processInfo.systemUptime
         loop.tick(now: now)
         ticks += 1
@@ -145,7 +143,8 @@ final class WindowsApp {
     }
 
     private func quit() {
-        _ = KillTimer(window, Self.tickTimer)
+        guard !isQuitting else { return }
+        isQuitting = true
         tray.remove()
         WindowsLogger.shared.log("👋 quit")
         PostQuitMessage(0)
