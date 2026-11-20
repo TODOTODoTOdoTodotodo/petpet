@@ -1,3 +1,4 @@
+import Foundation
 
 /// This object is responsible for checking which window edges the world treats as visible ledges and walls.
 enum WorldChecks {
