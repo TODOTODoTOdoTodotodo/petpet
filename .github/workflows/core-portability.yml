@@ -43,15 +43,20 @@ jobs:
           Start-Process notepad
           Start-Sleep -Seconds 3
           $app = Start-Process -FilePath "$bin\DeskPet.exe" -ArgumentList '--smoke', '8', '--report', 'smoke.json' -PassThru -NoNewWindow
-          # 펫이 내려앉은 뒤 화면 캡처 (레이어드 창은 CaptureBlt가 있어야 찍힘)
+          # 펫이 내려앉은 뒤 화면 캡처. 레이어드 창은 CaptureBlt가 있어야 찍히는데, PowerShell 7(.NET)은
+          # 이 값을 거부하므로 Windows PowerShell 5.1로 찍음. 캡처가 안 돼도 판정은 보고서의 픽셀 수로 함
           Start-Sleep -Seconds 5
+          $shotScript = @'
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing
           $screen = [System.Windows.Forms.SystemInformation]::VirtualScreen
           $shot = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
           $graphics = [System.Drawing.Graphics]::FromImage($shot)
-          $graphics.CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size,
-            [System.Drawing.CopyPixelOperation]::SourceCopy -bor [System.Drawing.CopyPixelOperation]::CaptureBlt)
-          $shot.Save("$pwd\screen.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $operation = [System.Drawing.CopyPixelOperation]::SourceCopy -bor [System.Drawing.CopyPixelOperation]::CaptureBlt
+          $graphics.CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size, $operation)
+          $shot.Save($args[0], [System.Drawing.Imaging.ImageFormat]::Png)
+          '@
+          Set-Content -Path shot.ps1 -Value $shotScript
+          try { powershell.exe -NoProfile -ExecutionPolicy Bypass -File shot.ps1 "$pwd\screen.png" } catch { Write-Host "screenshot failed: $_" }
           $app.WaitForExit()
           if (-not (Test-Path smoke.json)) { throw "no smoke report (exit code $($app.ExitCode))" }
           Get-Content smoke.json
