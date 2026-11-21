@@ -46,6 +46,7 @@ final class AppMenu {
         roster.rhythm.isEnabled = settings.workRhythmEnabled
         roster.typing.isEnabled = settings.typingReactionsEnabled
         roster.pranks.isEnabled = settings.cursorPranksEnabled
+        roster.aim.accuracy = settings.throwAccuracy
     }
 
     func nodes() -> [MenuNode] {
@@ -66,6 +67,9 @@ final class AppMenu {
                      checked: settings.tiresWithClaudeUsage),
             .command(text(.reactToTyping), .toggle(.typing), checked: settings.typingReactionsEnabled),
             .command(text(.pointerPranks), .toggle(.pointerPranks), checked: settings.cursorPranksEnabled),
+            .submenu(text(.throwAccuracy), ThrowAccuracy.allCases.map { level in
+                .command(MenuText.accuracy(level, in: language), .throwAccuracy(level), checked: level == settings.throwAccuracy)
+            }),
             .command(text(.breakReminders), .toggle(.workRhythm), checked: settings.workRhythmEnabled),
             .separator,
             .submenu(text(.petSize), PetSettings.scales.map { scale in
@@ -116,6 +120,9 @@ final class AppMenu {
         case .opacity(let alpha):
             settings.opacity = alpha
             host?.settingChanged(command)
+        case .throwAccuracy(let level):
+            settings.throwAccuracy = level
+            roster.aim.accuracy = level
         case .language(let language):
             settings.menuLanguage = language
         case .toggle(let toggle):

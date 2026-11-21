@@ -35,6 +35,7 @@ enum MenuText: CaseIterable {
     case pets, addPet, addAnotherPet, removePet, allPetsAs, removeThisPet
     case collection, unknownItem, resetCollection, resetTitle, resetMessage, resetConfirm, cancel
     case hat, hatNone, hats, newMark
+    case throwAccuracy
     case hold, holdNone, rename, renameTitle, renameMessage, save, removeMessage, removeConfirm
 
     func text(in language: MenuLanguage) -> String {
@@ -54,6 +55,20 @@ enum MenuText: CaseIterable {
     static func petLabel(name: String, look: String, level: Int, hearts: Int, next: Int?) -> String {
         let progress = next.map { "\(hearts)/\($0)" } ?? "\(hearts)"
         return "\(name) · \(look) · ❤️ Lv.\(level) (\(progress))"
+    }
+
+    /// 던지기 정확도 단계 이름
+    static func accuracy(_ level: ThrowAccuracy, in language: MenuLanguage) -> String {
+        switch (level, language) {
+        case (.always, .korean): return "늘 명중"
+        case (.often, .korean): return "자주 명중"
+        case (.sometimes, .korean): return "가끔 명중"
+        case (.wild, .korean): return "엉망"
+        case (.always, .english): return "Always Hit"
+        case (.often, .english): return "Often Hit"
+        case (.sometimes, .english): return "Sometimes Hit"
+        case (.wild, .english): return "Wild"
+        }
     }
 
     /// 펫 빼기 확인 제목
@@ -103,6 +118,7 @@ enum MenuText: CaseIterable {
         case .resetMessage: ("Every found item and hat is removed. This cannot be undone.", "모은 물건과 모자가 모두 지워집니다. 되돌릴 수 없습니다.")
         case .resetConfirm: ("Reset", "초기화")
         case .cancel: ("Cancel", "취소")
+        case .throwAccuracy: ("Throw Accuracy", "던지기 정확도")
         case .hat: ("Hat", "모자")
         case .hatNone: ("None", "안 씀")
         case .hats: ("Hats", "모자 목록")

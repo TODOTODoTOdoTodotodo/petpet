@@ -1,6 +1,7 @@
 {
   "name": "Lizard",
   "skill": "big_jump",
+  "aim": -0.05,
   "facing": "east",
   "source": "Assets/Sources/DungeonTilesetII/lizard_m",
   "frame": [

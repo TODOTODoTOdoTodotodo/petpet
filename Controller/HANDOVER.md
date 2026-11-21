@@ -69,7 +69,7 @@ private/
 │   │   ├── Pet/
 │   │   │   ├── Pet.swift              # 펫 몸(발 위치·방향·딛는 면), 현재 행동, 말풍선, 클릭·알림 수신
 │   │   │   ├── PetBehavior.swift      # 행동 프로토콜(클릭·알림 반응 포함), 땅 위 공통 반응, 물리 상수
-│   │   │   ├── Behaviors/             # Idle, Walk, Climb, Airborne, Act, Dragged, Sleep, Glance(인사·돌아보기·구경), SkillLeap, Peek(최대화 창 거꾸로 빼꼼), ScreenHop(모니터 건너가기), Pounce·Throw(포인터에 뛰어오르기·무기 던지기), CeilingWalk(창 아랫면 거꾸로 다니기), Tower(탑 맨 아래·머리로 뛰기·머리 위에 서기), Challenge(길 막은 펫에게 ⚔️ 결투 걸기), Entrance(메뉴바 밑에서 보는 창 위로 등장), Drumming(타이핑 따라 두드리기), Train(기관차·뒤 칸), CursorCarry(포인터 들고 달아나기), Fetch(물건 주우러 가기), Spin(Lv.2 한 바퀴)
+│   │   │   ├── Behaviors/             # Idle, Walk, Climb, Airborne, Act, Dragged, Sleep, Glance(인사·돌아보기·구경), SkillLeap, Peek(최대화 창 거꾸로 빼꼼), ScreenHop(모니터 건너가기), Pounce·Throw(포인터에 뛰어오르기·무기 던지기, 정확도는 ThrowAim), CeilingWalk(창 아랫면 거꾸로 다니기), Tower(탑 맨 아래·머리로 뛰기·머리 위에 서기), Challenge(길 막은 펫에게 ⚔️ 결투 걸기), Entrance(메뉴바 밑에서 보는 창 위로 등장), Drumming(타이핑 따라 두드리기), Train(기관차·뒤 칸), CursorCarry(포인터 들고 달아나기), Fetch(물건 주우러 가기), Spin(Lv.2 한 바퀴)
 │   │   │   ├── BehaviorPlanner.swift  # 다음 행동 선택(잠, 커서·친구 따라가기 포함), 등반 판단
 │   │   │   ├── PetRoster.swift        # 펫 목록 소유, 진행, 일정마다 펫 배정(전령 등장·퇴장), 화면 밖 펫 복귀
 │   │   │   ├── PetSocialCoordinator.swift # 펫끼리 마주치면 인사, 티격태격 대결(25%), 또는 올라타기 (짝별 20초 간격)
@@ -83,6 +83,7 @@ private/
 │   │   │   ├── FocusShift.swift       # 창이 바뀐 순간 알림(FocusTracker), 앱 종류 규칙표(AppCategory)
 │   │   │   ├── ChaseMode.swift        # 쫓아다닐 것: 활성 창(ActiveWindowChase) / 마우스 포인터(PointerChase)
 │   │   │   ├── Projectile.swift       # 닿지 않는 포인터에 던지는 무기(종류별 도트·궤적)
+│   │   │   ├── ThrowAim.swift         # 던지기 정확도 단계(메뉴)·캐릭터 성격(aim)·빗나간 곳
 │   │   │   ├── AttentionCoordinator.swift # 창을 바꾸면 쉬는 펫들이 돌아보고 앱 종류별 한마디
 │   │   │   ├── WorkRhythmCoordinator.swift # 기지개·어지러움 한마디 (기본 꺼짐)
 │   │   │   ├── DisplayFollowCoordinator.swift # 보고 있는 모니터로 나머지 펫이 8초에 한 마리씩 건너옴, 전령 등장 위치
@@ -101,6 +102,7 @@ private/
 │   │   │   ├── PetSkin.swift          # 스프라이트 목록·애니메이션·방향별 프레임 선택 (그림 형식은 플랫폼이 정함)
 │   │   │   ├── SkinLibrary.swift      # 스킨 폴더 탐색(SkinFolder)·전체 로드
 │   │   │   ├── SpriteAlphaScanner.swift # RGBA 픽셀로 빈 프레임 판정, 몸 영역 측정
+│   │   │   ├── HeadTracker.swift      # 프레임마다 머리 이동 측정(머리 본 맞추기). 모자가 머리를 따라감
 │   │   │   └── PNGDecoder.swift       # 플랫폼 없이 PNG → RGBA 픽셀 (inflate 포함). 윈도우판 스킨 로더·맥 밖 검사용
 │   │   ├── Schedule/
 │   │   │   ├── ScheduleAnnouncer.swift   # 알릴 시점·문구 결정 (10분 전, 시작, 마감)

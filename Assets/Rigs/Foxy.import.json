@@ -1,6 +1,7 @@
 {
   "name": "Foxy",
   "skill": "big_jump",
+  "aim": 0.05,
   "facing": "east",
   "source": "Assets/Sources/SunnyLand/Foxy",
   "frame": [

@@ -1,8 +1,8 @@
 import Foundation
 
 /// This object is responsible for a pet throwing its character's weapon at a point it cannot reach (the mouse pointer):
-/// turning toward it, winding up (with the attack frames when the skin has them), letting go aimed at where the point is now,
-/// and resting after. The thrown weapon itself is handed to the roster through the pet.
+/// turning toward it, winding up (with the attack frames when the skin has them), letting go aimed at where the point is now
+/// (sometimes missing, per the chosen accuracy and the character's aim), and resting after. The thrown weapon itself is handed to the roster through the pet.
 final class ThrowBehavior: PetBehavior {
     let name = "throwing"
     let occupiesSpace = true
@@ -39,7 +39,8 @@ final class ThrowBehavior: PetBehavior {
         if !hasThrown && elapsed >= Self.releaseTime {
             hasThrown = true
             pet.facing = aim.x >= pet.position.x ? .east : .west
-            pet.hurl(pet.appearance.skillStyle.projectile, at: aim)
+            let shot = context.aim?.shot(at: aim, by: pet, in: world) ?? ThrowShot(target: aim, missed: false)
+            pet.hurl(pet.appearance.skillStyle.projectile, at: shot.target, missed: shot.missed)
         }
         return elapsed >= duration ? context.planner.rest() : nil
     }

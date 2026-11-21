@@ -64,6 +64,8 @@ struct ThrowRequest: Equatable {
     let kind: ProjectileKind
     let from: CGPoint
     let to: CGPoint
+    /// 포인터를 빗나가게 던졌는지
+    var missed = false
 }
 
 /// This object is responsible for one thrown weapon: flying from a pet's hand to the point it was aimed at
@@ -88,7 +90,12 @@ final class Projectile {
     /// 비행 시간 범위
     static let flightRange: ClosedRange<TimeInterval> = 0.25...1.2
 
-    init(id: String, kind: ProjectileKind, throwerID: String, from start: CGPoint, to target: CGPoint, scale: CGFloat) {
+    /// 포인터를 빗나갔는지 (닿은 자리에 반짝임 대신 먼지)
+    private(set) var missed = false
+
+    init(id: String, kind: ProjectileKind, throwerID: String, from start: CGPoint, to target: CGPoint, scale: CGFloat,
+         missed: Bool = false) {
+        self.missed = missed
         self.id = id
         self.kind = kind
         self.throwerID = throwerID

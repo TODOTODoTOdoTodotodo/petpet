@@ -52,13 +52,19 @@ protocol PetAppearance: AnyObject {
     var skillStyle: SkillStyle { get }
     /// 모자 자리 보정 (스킨 도트 단위, x는 얼굴 쪽 +, y는 위 +)
     var hatAnchor: CGVector { get }
+    /// 던지기 성격: 맞힐 확률에 더하는 값 (예: 닌자 +0.15, 덩치 큰 악마 -0.15)
+    var aimBias: Double { get }
     func supports(_ kind: AnimationKind) -> Bool
+    /// 지금 프레임에서 머리가 서 있는 그림보다 옮겨 간 정도 (스킨 도트 단위, 화면 기준 x 오른쪽 +, y 위 +)
+    func headShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector
     /// 애니메이션 한 바퀴 시간
     func cycleDuration(of kind: AnimationKind, facing: Facing) -> TimeInterval
 }
 
 extension PetAppearance {
     var hatAnchor: CGVector { .zero }
+    var aimBias: Double { 0 }
+    func headShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector { .zero }
 }
 
 /// 펫이 딛고 있는 면과, 그 면이 창이면 직전에 본 창 위치
@@ -194,9 +200,9 @@ final class Pet {
     // MARK: - Throwing
 
     /// 손(몸 앞쪽 어깨 높이)에서 target으로 무기를 던짐. PetRoster가 다음에 받아 감
-    func hurl(_ kind: ProjectileKind, at target: CGPoint) {
+    func hurl(_ kind: ProjectileKind, at target: CGPoint, missed: Bool = false) {
         let hand = CGPoint(x: position.x + facing.sign * bodyHalfWidth, y: position.y + bodyHeight * 0.6)
-        thrown.append(ThrowRequest(kind: kind, from: hand, to: target))
+        thrown.append(ThrowRequest(kind: kind, from: hand, to: target, missed: missed))
     }
 
     /// 친밀도가 될 일을 쌓아 둠 (AffectionCoordinator가 거둠)

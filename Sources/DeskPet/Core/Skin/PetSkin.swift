@@ -47,7 +47,14 @@ final class PetSkin<Frame>: PetAppearance {
     private(set) var skillStyle: SkillStyle = .bigJump
     /// 모자 자리 보정 (metadata.json의 "deskpet": {"hatAnchor": [dx, dy]}, 스킨 도트 단위)
     private(set) var hatAnchor: CGVector = .zero
+    /// 던지기 성격 (metadata.json의 "deskpet": {"aim": 0.15}, 맞힐 확률에 더함)
+    private(set) var aimBias: Double = 0
     private var idleBounds: CGRect?
+    /// 방향별 서 있는 그림 픽셀 (머리 본의 기준)
+    private var referencePixels: [Facing: SpritePixels] = [:]
+    private var headTemplates: [Facing: HeadTracker.Template?] = [:]
+    /// 동작 칸별·방향별 프레임마다 머리가 옮겨 간 정도 (스킨 도트 단위, 그림 기준 x 오른쪽 +, y 위 +)
+    private var headShifts: [String: [Facing: [CGVector]]] = [:]
     /// 동작별 프레임 간격 덮어쓰기 (metadata.json의 "deskpet": {"intervals": {"idle": 0.06}})
     private var intervalOverrides: [AnimationKind: TimeInterval] = [:]
 
@@ -76,10 +83,17 @@ final class PetSkin<Frame>: PetAppearance {
 
     func sprite(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> SpriteFrame<Frame>? {
         guard let clip = clip(for: kind, facing: facing), !clip.frames.isEmpty else { return nil }
-        let tick = Int(elapsed / clip.interval)
-        // 동작은 한 번만 재생하고 마지막 프레임에서 멈춤
-        let index = kind == .act ? min(tick, clip.frames.count - 1) : tick % clip.frames.count
-        return SpriteFrame(texture: clip.frames[index], mirrored: clip.mirrored)
+        return SpriteFrame(texture: clip.frames[clip.index(at: elapsed, for: kind)], mirrored: clip.mirrored)
+    }
+
+    /// 지금 그리는 프레임에서 머리가 서 있는 그림보다 옮겨 간 정도 (스킨 도트 단위, 화면 기준 x 오른쪽 +, y 위 +)
+    func headShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector {
+        guard let clip = clip(for: kind, facing: facing), !clip.frames.isEmpty else { return .zero }
+        let index = clip.index(at: elapsed, for: kind)
+        guard index < clip.heads.count else { return .zero }
+        let shift = clip.heads[index]
+        // 좌우 반전해 그리면 x도 반대
+        return CGVector(dx: clip.mirrored ? -shift.dx : shift.dx, dy: shift.dy)
     }
 
     // MARK: - Clip selection
@@ -88,12 +102,20 @@ final class PetSkin<Frame>: PetAppearance {
         let frames: [Frame]
         let mirrored: Bool
         let interval: TimeInterval
+        /// 프레임마다 머리 이동 (비었으면 움직이지 않는 것으로 봄)
+        var heads: [CGVector] = []
+
+        func index(at elapsed: TimeInterval, for kind: AnimationKind) -> Int {
+            let tick = Int(elapsed / interval)
+            // 동작은 한 번만 재생하고 마지막 프레임에서 멈춤
+            return kind == .act ? min(tick, frames.count - 1) : tick % frames.count
+        }
     }
 
     private func clip(for kind: AnimationKind, facing: Facing) -> Clip? {
         guard let base = defaultClip(for: kind, facing: facing) else { return nil }
         guard let interval = intervalOverrides[kind], base.interval != 1 else { return base }
-        return Clip(frames: base.frames, mirrored: base.mirrored, interval: interval)
+        return Clip(frames: base.frames, mirrored: base.mirrored, interval: interval, heads: base.heads)
     }
 
     private func defaultClip(for kind: AnimationKind, facing: Facing) -> Clip? {
@@ -104,28 +126,28 @@ final class PetSkin<Frame>: PetAppearance {
             if facing == .south, let front = idleTextures[.south] {
                 return Clip(frames: [front], mirrored: false, interval: 1)
             }
-            return sided(idleLoopTextures, facing: facing, interval: FrameInterval.idle)
+            return sided(idleLoopTextures, heads: headShifts["idle"], facing: facing, interval: FrameInterval.idle)
                 ?? sided(stills, facing: facing, interval: 1)
         case .airborne:
-            return sided(jumpTextures, facing: facing, interval: FrameInterval.jump)
+            return sided(jumpTextures, heads: headShifts["jump"], facing: facing, interval: FrameInterval.jump)
                 ?? sided(stills, facing: facing, interval: 1)
         case .dragged:
             return sided(stills, facing: .south, interval: 1)
         case .hang:
-            return sided(hangTextures, facing: facing, interval: FrameInterval.hang)
+            return sided(hangTextures, heads: headShifts["hang"], facing: facing, interval: FrameInterval.hang)
                 ?? sided(stills, facing: .south, interval: 1)
         case .sleep:
-            return sided(sleepTextures, facing: facing, interval: FrameInterval.sleep)
+            return sided(sleepTextures, heads: headShifts["sleep"], facing: facing, interval: FrameInterval.sleep)
                 ?? sided(stills, facing: .south, interval: 1)
         case .walk:
-            return sided(walkTextures, facing: facing, interval: FrameInterval.walk)
+            return sided(walkTextures, heads: headShifts["walk"], facing: facing, interval: FrameInterval.walk)
                 ?? sided(stills, facing: facing, interval: 1)
         case .climb:
             // 전용 오르기(뒷모습) → 전용 오르기(옆, 벽 쪽 방향 기준) → 뒷모습 걷기 → 벽 쪽을 향한 걷기
             if let climb = climbTextures[.north], !climb.isEmpty {
-                return Clip(frames: climb, mirrored: false, interval: FrameInterval.climb)
+                return Clip(frames: climb, mirrored: false, interval: FrameInterval.climb, heads: headShifts["climb"]?[.north] ?? [])
             }
-            if let side = sided(climbTextures.filter { $0.key == .east || $0.key == .west }, facing: facing, interval: FrameInterval.climb) {
+            if let side = sided(climbTextures.filter { $0.key == .east || $0.key == .west }, heads: headShifts["climb"], facing: facing, interval: FrameInterval.climb) {
                 return side
             }
             if let climb = climbTextures.values.first, !climb.isEmpty {
@@ -134,25 +156,27 @@ final class PetSkin<Frame>: PetAppearance {
             if let back = walkTextures[.north], !back.isEmpty {
                 return Clip(frames: back, mirrored: false, interval: FrameInterval.climb)
             }
-            return sided(walkTextures, facing: facing, interval: FrameInterval.climb)
+            return sided(walkTextures, heads: headShifts["walk"], facing: facing, interval: FrameInterval.climb)
                 ?? sided(stills, facing: facing, interval: 1)
         case .act:
-            return sided(actionTextures, facing: facing, interval: FrameInterval.act)
+            return sided(actionTextures, heads: headShifts["act"], facing: facing, interval: FrameInterval.act)
         }
     }
 
     /// 그 방향 이미지가 있으면 그대로, 없으면 반대 방향을 좌우 반전, 그것도 없으면 정면
-    private func sided(_ table: [Facing: [Frame]], facing: Facing, interval: TimeInterval) -> Clip? {
+    private func sided(_ table: [Facing: [Frame]], heads: [Facing: [CGVector]]? = nil, facing: Facing, interval: TimeInterval) -> Clip? {
         if let frames = table[facing], !frames.isEmpty {
-            return Clip(frames: frames, mirrored: false, interval: interval)
+            return Clip(frames: frames, mirrored: false, interval: interval, heads: heads?[facing] ?? [])
         }
         if facing == .east || facing == .west, let frames = table[facing.opposite], !frames.isEmpty {
-            return Clip(frames: frames, mirrored: true, interval: interval)
+            return Clip(frames: frames, mirrored: true, interval: interval, heads: heads?[facing.opposite] ?? [])
         }
         if let frames = table[.south], !frames.isEmpty {
-            return Clip(frames: frames, mirrored: false, interval: interval)
+            return Clip(frames: frames, mirrored: false, interval: interval, heads: heads?[.south] ?? [])
         }
-        return table.values.first { !$0.isEmpty }.map { Clip(frames: $0, mirrored: false, interval: interval) }
+        return table.first { !$0.value.isEmpty }.map {
+            Clip(frames: $0.value, mirrored: false, interval: interval, heads: heads?[$0.key] ?? [])
+        }
     }
 
     // MARK: - Loading
@@ -167,6 +191,9 @@ final class PetSkin<Frame>: PetAppearance {
         if let options = json["deskpet"] as? [String: Any] {
             if let skill = (options["skill"] as? String).flatMap(SkillStyle.init(rawValue:)) {
                 skillStyle = skill
+            }
+            if let aim = options["aim"].flatMap(JSONNumber.double) {
+                aimBias = min(max(aim, -0.5), 0.5)
             }
             if let pair = options["hatAnchor"] as? [Any], pair.count == 2 {
                 hatAnchor = CGVector(dx: JSONNumber.double(pair[0]) ?? 0, dy: JSONNumber.double(pair[1]) ?? 0)
@@ -183,44 +210,70 @@ final class PetSkin<Frame>: PetAppearance {
         for state in states {
             let frames = state["frames"] as? [String: Any] ?? [:]
             for (key, path) in frames["rotations"] as? [String: String] ?? [:] {
-                guard let facing = Facing(rawValue: key), let texture = loadTexture(path, measuresBody: true) else { continue }
-                idleTextures[facing] = texture
+                guard let facing = Facing(rawValue: key), let loaded = loadTexture(path, measuresBody: true) else { continue }
+                idleTextures[facing] = loaded.frame
+                referencePixels[facing] = loaded.pixels
             }
         }
 
         let animations = (states.first?["frames"] as? [String: Any])?["animations"] as? [String: Any] ?? [:]
         let keys = animations.keys.sorted()
         if let walkKey = keys.first(where: { $0.contains("Walk") || $0.contains("Run") }) {
-            walkTextures = loadDirectionalFrames(animations[walkKey])
+            walkTextures = loadDirectionalFrames(animations[walkKey], track: "walk")
         }
         if let actionKey = keys.first(where: { $0.lowercased().contains("attack") || $0.lowercased().contains("swing") }) {
-            actionTextures = loadDirectionalFrames(animations[actionKey])
+            actionTextures = loadDirectionalFrames(animations[actionKey], track: "act")
         }
         // 선택 동작 칸은 이름이 정확히 같을 때만 (Blink 같은 다른 대기 변형과 섞이지 않게)
-        idleLoopTextures = loadDirectionalFrames(animations["Idle"])
-        jumpTextures = loadDirectionalFrames(animations["Jump"])
-        hangTextures = loadDirectionalFrames(animations["Hang"])
-        sleepTextures = loadDirectionalFrames(animations["Sleep"])
-        climbTextures = loadDirectionalFrames(animations["Climb"])
+        idleLoopTextures = loadDirectionalFrames(animations["Idle"], track: "idle")
+        jumpTextures = loadDirectionalFrames(animations["Jump"], track: "jump")
+        hangTextures = loadDirectionalFrames(animations["Hang"], track: "hang")
+        sleepTextures = loadDirectionalFrames(animations["Sleep"], track: "sleep")
+        climbTextures = loadDirectionalFrames(animations["Climb"], track: "climb")
     }
 
-    /// 방향별 프레임 목록. "south-25d6d0a4"처럼 변형이 여럿이면 정렬상 첫 번째만 사용
-    private func loadDirectionalFrames(_ value: Any?) -> [Facing: [Frame]] {
+    /// 방향별 프레임 목록. "south-25d6d0a4"처럼 변형이 여럿이면 정렬상 첫 번째만 사용. 프레임마다 머리 이동도 잼
+    private func loadDirectionalFrames(_ value: Any?, track: String) -> [Facing: [Frame]] {
         guard let table = value as? [String: Any] else { return [:] }
         var result: [Facing: [Frame]] = [:]
         for key in table.keys.sorted() {
             guard let facing = Facing.allCases.first(where: { key.hasPrefix($0.rawValue) }),
                   result[facing] == nil,
                   let paths = table[key] as? [String] else { continue }
-            let textures = paths.compactMap { loadTexture($0, measuresBody: false) }
-            if !textures.isEmpty {
-                result[facing] = textures
+            let sprites = paths.compactMap { loadTexture($0, measuresBody: false) }
+            if !sprites.isEmpty {
+                result[facing] = sprites.map(\.frame)
+                headShifts[track, default: [:]][facing] = sprites.map { headShift(of: $0.pixels, facing: facing) }
             }
         }
         return result
     }
 
-    private func loadTexture(_ relativePath: String, measuresBody: Bool) -> Frame? {
+    /// 서 있는 그림 대비 머리 이동 (스킨 도트 단위). 잴 수 없으면 0
+    private func headShift(of pixels: SpritePixels?, facing: Facing) -> CGVector {
+        guard let pixels, let template = headTemplate(for: facing),
+              let shift = HeadTracker.shift(of: pixels, from: template) else { return .zero }
+        let unit = Pet.frameSide / CGFloat(pixels.width)
+        return CGVector(dx: shift.dx * unit, dy: shift.dy * unit)
+    }
+
+    /// 그 방향 서 있는 그림, 없으면 반대 방향을 뒤집은 것, 그것도 없으면 정면에서 만든 머리 본
+    private func headTemplate(for facing: Facing) -> HeadTracker.Template? {
+        if let cached = headTemplates[facing] { return cached }
+        let template: HeadTracker.Template?
+        if let own = referencePixels[facing] {
+            template = HeadTracker.template(from: own)
+        } else if facing == .east || facing == .west, let other = referencePixels[facing.opposite] {
+            template = HeadTracker.template(from: other, mirrored: true)
+        } else {
+            template = (referencePixels[.south] ?? referencePixels.values.first).flatMap { HeadTracker.template(from: $0) }
+        }
+        headTemplates[facing] = template
+        return template
+    }
+
+    /// 보이는 픽셀이 없는 칸은 nil
+    private func loadTexture(_ relativePath: String, measuresBody: Bool) -> LoadedSprite<Frame>? {
         guard let loaded = loader(basePath.appendingPathComponent(relativePath)) else { return nil }
         if let pixels = loaded.pixels {
             switch SpriteAlphaScanner.scan(pixels) {
@@ -236,6 +289,6 @@ final class PetSkin<Frame>: PetAppearance {
                 break
             }
         }
-        return loaded.frame
+        return loaded
     }
 }

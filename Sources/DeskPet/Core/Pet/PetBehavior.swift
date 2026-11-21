@@ -41,6 +41,8 @@ struct PetContext {
     var typingRate: Double = 0
     /// Claude 사용량에 따른 기력
     var vigor: Vigor = .fresh
+    /// 던질 때 겨냥 (없으면 늘 명중)
+    var aim: ThrowAim?
 }
 
 /// 행동이 요청하는 그리기 효과

@@ -24,6 +24,7 @@ struct ImportedClip {
 ///   "animations": { "Idle": { "file": "Idle (32x32).png" }, "Hang": { "file": "Fall (32x32).png", "bob": [0, 1, 1, 0] } },
 ///   "intervals": { "idle": 0.06 },
 ///   "hatAnchor": [6, -2],                          (선택: 모자 자리 보정, 도트 단위. x는 얼굴 쪽 +, y는 위 +)
+///   "aim": 0.15,                                   (선택: 던지기 성격, 맞힐 확률에 더함. -0.5~0.5)
 ///   "crop": [5, 6, 22, 21], "scale": 2,            (선택: 칸 안 잘라 쓸 영역, 정수배 확대)
 ///   "animations": { "Walking": { "file": "Walk.png", "column": 2 } }   (선택: 열 단위 시트)
 ///   "credit": { "author": "Pixel Frog", "url": "…", "license": "CC0 1.0" } }
@@ -42,6 +43,8 @@ struct ImportRecipe {
     let credit: [String: String]
     /// 모자 자리 보정 (도트, 얼굴 쪽 x·위쪽 y). 없으면 몸 꼭대기 가운데
     var hatAnchor: [Double]?
+    /// 던지기 성격 (맞힐 확률에 더하는 값)
+    var aim: Double?
     /// 프레임 칸 안에서 쓸 영역 (x, y, 폭, 높이). 없으면 칸 전체
     var crop: (x: Int, y: Int, width: Int, height: Int)?
     /// 정수배 확대 (작은 16px 캐릭터용)
@@ -77,6 +80,10 @@ struct ImportRecipe {
             intervals: (json["intervals"] as? [String: NSNumber])?.mapValues(\.doubleValue) ?? [:],
             credit: json["credit"] as? [String: String] ?? [:]
         )
+        if let aim = json["aim"] as? NSNumber {
+            guard abs(aim.doubleValue) <= 0.5 else { throw ForgeError(description: "aim은 -0.5~0.5") }
+            recipe.aim = aim.doubleValue
+        }
         if let anchor = json["hatAnchor"] as? [NSNumber] {
             guard anchor.count == 2 else { throw ForgeError(description: "hatAnchor는 [x, y] 두 수") }
             recipe.hatAnchor = anchor.map(\.doubleValue)
@@ -213,6 +220,7 @@ struct SheetImporter {
         var options: [String: Any] = ["skill": recipe.skill, "generator": SkinBuilder.generatorTag, "import": recipePath]
         if !recipe.intervals.isEmpty { options["intervals"] = recipe.intervals }
         if let anchor = recipe.hatAnchor { options["hatAnchor"] = anchor }
+        if let aim = recipe.aim { options["aim"] = aim }
         if !recipe.credit.isEmpty { options["credit"] = recipe.credit }
         let metadata: [String: Any] = [
             "deskpet": options,

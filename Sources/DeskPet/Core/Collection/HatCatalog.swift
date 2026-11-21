@@ -80,7 +80,8 @@ struct HatFrame: Equatable {
 
 /// This object is responsible for where a hat sits on a pet: centered on the top of its measured body
 /// (sunk a little so it rests on the head), facing the way the pet faces, under the head when the pet hangs
-/// upside down, and nudged by the skin's own hatAnchor when its head is off-center.
+/// upside down, nudged by the skin's own hatAnchor when its head is off-center, and moved with the head
+/// as the current animation frame bobs, crouches or leans.
 enum HatPlacement {
     /// 머리에 얹히도록 몸 꼭대기 아래로 내리는 도트 수
     static let sink: CGFloat = 2
@@ -91,14 +92,16 @@ enum HatPlacement {
         let facing = pet.displayFacing
         let forward: CGFloat = facing == .east ? 1 : (facing == .west ? -1 : 0)
         let anchor = pet.appearance.hatAnchor
-        let x = pet.position.x + forward * anchor.dx * s - size.width / 2
-        let rise = (anchor.dy - sink) * s
+        // 지금 프레임의 머리 이동 (걷기 들썩임, 웅크림, 점프 자세 등)
+        let head = pet.appearance.headShift(for: pet.animation, facing: facing, elapsed: pet.animationElapsed)
+        let x = pet.position.x + (forward * anchor.dx + head.dx) * s - size.width / 2
+        let rise = (anchor.dy + head.dy - sink) * s
         if pet.pose.upsideDown {
-            let head = pet.position.y - pet.bodyHeight
-            return HatFrame(rect: CGRect(x: x, y: head - rise - size.height, width: size.width, height: size.height),
+            let top = pet.position.y - pet.bodyHeight
+            return HatFrame(rect: CGRect(x: x, y: top - rise - size.height, width: size.width, height: size.height),
                             flipX: facing == .east, flipY: true)
         }
-        let head = pet.position.y + pet.bodyHeight
-        return HatFrame(rect: CGRect(x: x, y: head + rise, width: size.width, height: size.height), flipX: facing == .east, flipY: false)
+        let top = pet.position.y + pet.bodyHeight
+        return HatFrame(rect: CGRect(x: x, y: top + rise, width: size.width, height: size.height), flipX: facing == .east, flipY: false)
     }
 }

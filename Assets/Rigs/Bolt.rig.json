@@ -1,6 +1,7 @@
 {
   "name": "Bolt",
   "skill": "flame_rocket",
+  "aim": 0.1,
   "facing": "west",
   "canvas": 48,
   "palette": {

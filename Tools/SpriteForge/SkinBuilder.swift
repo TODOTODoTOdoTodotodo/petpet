@@ -63,8 +63,10 @@ struct SkinBuilder {
         let restPath = "rotations/\(direction).png"
         try Raster.writePNG(Raster.render(rig, pose: Pose()).grid, to: folder.appendingPathComponent(restPath))
 
+        var options: [String: Any] = ["skill": rig.skill, "generator": Self.generatorTag, "rig": rigPath]
+        if let aim = rig.aim { options["aim"] = aim }
         let metadata: [String: Any] = [
-            "deskpet": ["skill": rig.skill, "generator": Self.generatorTag, "rig": rigPath],
+            "deskpet": options,
             "states": [["frames": ["rotations": [direction: restPath], "animations": animationTable]]],
         ]
         let data = try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted, .sortedKeys])

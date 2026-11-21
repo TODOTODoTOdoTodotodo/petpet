@@ -55,6 +55,14 @@ enum AppMenuChecks {
         check.expect(settings.scale == 2.0 && roster.residents.allSatisfy { $0.scale == 2.0 }, "크기 바꾸면 펫도 바뀜")
         menu.perform(.chase(PointerChase.key))
         check.expect(settings.chaseMode == PointerChase.key && roster.chase is PointerChase, "쫓을 것 바꾸기")
+        if case .submenu(let levels, _)? = menu.nodes().find(MenuText.throwAccuracy.text(in: .english))?.kind {
+            check.expect(levels.count == 4 && levels.first(where: \.checked)?.title == MenuText.accuracy(.often, in: .english),
+                         "던지기 정확도: 4단계, 기본 자주 명중 체크")
+        } else {
+            check.expect(false, "던지기 정확도 하위 메뉴 있음")
+        }
+        menu.perform(.throwAccuracy(.sometimes))
+        check.expect(settings.throwAccuracy == .sometimes && roster.aim.accuracy == .sometimes, "정확도 바꾸면 저장·펫에 적용")
         menu.perform(.platform(.openLog))
         check.expect(host.actions == [.openLog], "로그 열기는 껍데기가 함")
 

@@ -1,6 +1,7 @@
 {
   "name": "Skeleton",
   "skill": "big_jump",
+  "aim": -0.1,
   "facing": "west",
   "source": "Assets/Sources/NinjaAdventure/Skeleton",
   "frame": [

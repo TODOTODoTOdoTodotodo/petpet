@@ -44,6 +44,8 @@ struct Rig {
     let layers: [String: Layer]
     let overlays: [String: Layer]
     let colorCount: Int
+    /// 던지기 성격 (맞힐 확률에 더하는 값, 선택)
+    var aim: Double?
 
     var directionName: String { facingWest ? "west" : "east" }
 
@@ -84,7 +86,7 @@ struct Rig {
             throw ForgeError(description: "\(url.lastPathComponent) 문제:\n" + problems.map { "  - \($0)" }.joined(separator: "\n"))
         }
         return Rig(name: name, skill: skill, facingWest: facing == "west", canvas: canvas,
-                   layers: layers, overlays: overlays, colorCount: palette.count)
+                   layers: layers, overlays: overlays, colorCount: palette.count, aim: (json["aim"] as? NSNumber)?.doubleValue)
     }
 
     private static func parsePalette(_ value: Any?, problems: inout [String]) -> [Character: RGBA] {

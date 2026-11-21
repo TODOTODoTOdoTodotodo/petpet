@@ -40,6 +40,7 @@ enum MenuCommand: Equatable {
     case chase(String)
     case scale(CGFloat)
     case opacity(CGFloat)
+    case throwAccuracy(ThrowAccuracy)
     case language(MenuLanguage)
     case toggle(MenuToggle)
     case platform(PlatformAction)

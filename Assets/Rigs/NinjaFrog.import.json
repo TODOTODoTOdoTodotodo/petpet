@@ -1,6 +1,7 @@
 {
   "name": "NinjaFrog",
   "skill": "slash_jump",
+  "aim": 0.15,
   "facing": "east",
   "source": "Assets/Sources/PixelAdventure1/Ninja Frog",
   "frame": [

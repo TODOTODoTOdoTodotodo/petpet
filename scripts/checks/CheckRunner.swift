@@ -34,6 +34,8 @@ struct CheckRunner {
         HabitatChecks.run(check)
         SettingsChecks.run(check)
         SceneChecks.run(check)
+        ThrowAimChecks.run(check)
+        HeadTrackerChecks.run(check, skinsDirectory: skins)
         AppMenuChecks.run(check, skinsDirectory: skins)
 
         print("\n\(check.total - check.failures)/\(check.total) passed")

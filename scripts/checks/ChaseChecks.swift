@@ -181,6 +181,8 @@ enum ChaseChecks {
         do {
             let world = Sim.world()
             let roster = Self.roster(seed: 65)
+            // 던지는 길만 보는 검사라 늘 명중 (빗나가기는 ThrowAimChecks)
+            roster.aim.accuracy = .always
             var events: [String] = []
             roster.onEvent = { events.append($0) }
             let pet = restingPet(in: roster, world: world, x: 800)

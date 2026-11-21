@@ -35,6 +35,12 @@ final class PetSettings {
         set { store.set(number: Double(newValue), forKey: "opacity") }
     }
 
+    /// 던지기 정확도 (기본 자주 명중)
+    var throwAccuracy: ThrowAccuracy {
+        get { store.string(forKey: "throwAccuracy").flatMap(ThrowAccuracy.init(rawValue:)) ?? .standard }
+        set { store.set(string: newValue.rawValue, forKey: "throwAccuracy") }
+    }
+
     /// 일정 말풍선 사용 (기본 켜짐)
     var schedulesEnabled: Bool {
         get { store.flag(forKey: "schedulesEnabled") ?? true }

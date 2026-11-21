@@ -50,8 +50,11 @@ struct ProjectileDrawing {
     let scale: CGFloat
     /// 닿은 뒤 반짝임 진행 (0~1). 날아가는 중이면 nil
     let burst: Double?
+    /// 포인터를 빗나갔는지 (반짝임 대신 먼지)
+    let missed: Bool
 
     init(_ projectile: Projectile) {
+        missed = projectile.missed
         id = projectile.id
         kind = projectile.kind
         center = projectile.position

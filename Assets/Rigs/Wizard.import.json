@@ -1,6 +1,7 @@
 {
   "name": "Wizard",
   "skill": "flame_rocket",
+  "aim": 0.05,
   "facing": "east",
   "source": "Assets/Sources/DungeonTilesetII/wizzard_m",
   "frame": [

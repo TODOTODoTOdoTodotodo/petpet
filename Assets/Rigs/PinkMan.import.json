@@ -1,6 +1,7 @@
 {
   "name": "PinkMan",
   "skill": "big_jump",
+  "aim": -0.05,
   "facing": "east",
   "source": "Assets/Sources/PixelAdventure1/Pink Man",
   "frame": [

@@ -137,6 +137,9 @@ enum SkinChecks {
         }
         let skills = ["Boy": SkillStyle.slashJump, "NinjaFrog": .slashJump, "VirtualGuy": .flameRocket, "PinkMan": .bigJump, "Girl": .slashJump, "Goblin": .poleVault, "Radish": .flameRocket, "Nabi": .bigJump, "Bolt": .flameRocket]
         // 공개 저장소에 없는 캐릭터(scripts/private-skins.txt)는 있을 때만 확인
+        let aims = ["NinjaFrog": 0.15, "BigDemon": -0.15, "Bolt": 0.1, "Knight": 0.0, "Nabi": 0.0]
+        check.expect(aims.allSatisfy { library.skins[$0.key]?.aimBias == $0.value }, "캐릭터별 던지기 성격 (닌자 +, 덩치 큰 악마 −)",
+                     "\(aims.keys.map { "\($0)=\(library.skins[$0]?.aimBias ?? -9)" })")
         for (name, style) in skills where library.skins[name] != nil || !["Boy", "Girl", "Goblin", "Radish"].contains(name) {
             check.expect(library.skins[name]?.skillStyle == style, "\(name): 스킬 \(style.rawValue)")
         }

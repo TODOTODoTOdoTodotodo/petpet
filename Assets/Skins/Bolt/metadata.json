@@ -1,5 +1,6 @@
 {
   "deskpet" : {
+    "aim" : 0.10000000000000001,
     "generator" : "SpriteForge",
     "rig" : "Assets\/Rigs\/Bolt.rig.json",
     "skill" : "flame_rocket"

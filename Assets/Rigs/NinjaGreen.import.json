@@ -1,6 +1,7 @@
 {
   "name": "NinjaGreen",
   "skill": "slash_jump",
+  "aim": 0.15,
   "facing": "west",
   "source": "Assets/Sources/NinjaAdventure/NinjaGreen",
   "frame": [

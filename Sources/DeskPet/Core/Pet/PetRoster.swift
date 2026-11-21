@@ -65,6 +65,8 @@ final class PetRoster {
     static let maxProjectiles = 8
     /// 무기가 포인터에 닿았을 때 던진 펫이 하는 말과 확률
     static let hitText = "🎯"
+    /// 빗나갔을 때 던진 펫이 하는 말
+    static let missText = "😅"
     static let hitRemarkChance = 0.3
     /// 전할 펫을 기다리는 일정 알림
     private(set) var pendingNotices: [ScheduleNotice] = []
@@ -76,9 +78,15 @@ final class PetRoster {
     var onEvent: ((String) -> Void)?
 
     /// findingRandom: 물건 떨어뜨리기 전용 난수 (검사에서 고정 시드로 바꿈)
-    init(planner: BehaviorPlanner = BehaviorPlanner(), findingRandom: RandomSource = SystemRandomSource()) {
+    /// 던질 때 겨냥 (정확도 단계, 빗나간 곳)
+    let aim: ThrowAim
+
+    /// findingRandom·aimRandom: 물건 떨어뜨리기·빗나가기 전용 난수 (검사에서 고정 시드로 바꿈)
+    init(planner: BehaviorPlanner = BehaviorPlanner(), findingRandom: RandomSource = SystemRandomSource(),
+         aimRandom: RandomSource = SystemRandomSource()) {
         self.planner = planner
         self.finding = FindingCoordinator(random: findingRandom)
+        self.aim = ThrowAim(random: aimRandom)
     }
 
     var residents: [Pet] { pets.filter { $0.role == .resident } }
@@ -157,6 +165,7 @@ final class PetRoster {
         context.vigor = vigor
         context.allowsDuels = !isQuiet && vigor.isEnergetic
         context.typingRate = typing.rate
+        context.aim = aim
         chaseTarget = chase.target(in: world, cursor: cursor, dt: dt)
         if !isQuiet { context.pointer = chaseTarget.point }
         context.allowsSkills = skills.isEnabled && !isQuiet && vigor.isEnergetic
@@ -270,14 +279,14 @@ final class PetRoster {
         for pet in pets {
             for request in pet.takeThrows() where projectiles.count < Self.maxProjectiles {
                 projectiles.append(Projectile(id: "P-\(nextProjectile)", kind: request.kind, throwerID: pet.id,
-                                              from: request.from, to: request.to, scale: pet.scale))
+                                              from: request.from, to: request.to, scale: pet.scale, missed: request.missed))
                 nextProjectile += 1
-                onEvent?("🎯 [\(pet.id)] threw \(request.kind.name) at (\(Int(request.to.x)), \(Int(request.to.y)))")
+                onEvent?("🎯 [\(pet.id)] threw \(request.kind.name) at (\(Int(request.to.x)), \(Int(request.to.y)))" + (request.missed ? " (miss)" : ""))
             }
         }
         for projectile in projectiles where projectile.step(dt: dt) {
             if planner.chance(Self.hitRemarkChance) {
-                pet(withID: projectile.throwerID)?.say(Self.hitText, for: 1.0)
+                pet(withID: projectile.throwerID)?.say(projectile.missed ? Self.missText : Self.hitText, for: 1.0)
             }
         }
         projectiles.removeAll { $0.isFinished }

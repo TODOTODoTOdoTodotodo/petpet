@@ -239,7 +239,11 @@ final class ScreenStage {
                 node.size = CGSize(width: side * (1 + CGFloat(burst)), height: side * (1 + CGFloat(burst)))
                 node.alpha = 1 - CGFloat(burst)
                 node.zRotation = 0
+                // 빗나가면 반짝임 대신 회색 먼지
+                node.color = Self.dustColor
+                node.colorBlendFactor = drawing.missed ? 0.9 : 0
             } else {
+                node.colorBlendFactor = 0
                 node.texture = ProjectileArt.texture(for: drawing.kind)
                 node.size = CGSize(width: side, height: side)
                 node.alpha = 1
@@ -273,6 +277,9 @@ final class ScreenStage {
             if drawing.trail && Bool.random() { sparkle(at: CGPoint(x: drawing.rect.midX, y: drawing.rect.midY), side: drawing.rect.width) }
         }
     }
+
+    /// 빗나간 무기가 닿은 자리의 먼지 색
+    private static let dustColor = NSColor(white: 0.62, alpha: 1)
 
     /// 발자국 색 단계별 물들임 (0단계는 원래 노란색)
     private static let footstepTints: [NSColor?] = [nil, NSColor(red: 1, green: 0.55, blue: 0.78, alpha: 1), NSColor(red: 1, green: 0.8, blue: 0.2, alpha: 1)]

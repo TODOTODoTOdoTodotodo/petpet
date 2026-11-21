@@ -1,6 +1,7 @@
 {
   "name": "VirtualGuy",
   "skill": "flame_rocket",
+  "aim": 0.05,
   "facing": "east",
   "source": "Assets/Sources/PixelAdventure1/Virtual Guy",
   "frame": [
