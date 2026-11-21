@@ -1,24 +1,13 @@
 import Foundation
 
 /// This object is responsible for one skin picture ready for Windows drawing: premultiplied BGRA pixels,
-/// top row first — the layout `UpdateLayeredWindow` expects — decoded by the shared `PNGDecoder` (no WIC).
+/// top row first — the layout layered windows expect — decoded by the shared `PNGDecoder` (no WIC).
+/// A class, so the same frame is the same object, like a texture.
 final class WinSprite {
-    let width: Int
-    let height: Int
-    let bgra: [UInt8]
+    let image: PremultipliedImage
 
     init(pixels: SpritePixels) {
-        width = pixels.width
-        height = pixels.height
-        var bgra = [UInt8](repeating: 0, count: pixels.rgba.count)
-        for index in stride(from: 0, to: pixels.rgba.count, by: 4) {
-            let alpha = UInt16(pixels.rgba[index + 3])
-            bgra[index] = UInt8(UInt16(pixels.rgba[index + 2]) * alpha / 255)
-            bgra[index + 1] = UInt8(UInt16(pixels.rgba[index + 1]) * alpha / 255)
-            bgra[index + 2] = UInt8(UInt16(pixels.rgba[index]) * alpha / 255)
-            bgra[index + 3] = UInt8(alpha)
-        }
-        self.bgra = bgra
+        image = PremultipliedImage(pixels: pixels)
     }
 
     static func load(_ url: URL) -> LoadedSprite<WinSprite>? {

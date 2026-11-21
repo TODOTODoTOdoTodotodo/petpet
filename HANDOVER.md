@@ -58,7 +58,8 @@ private/
 │   │   │   └── PetPointerGesture.swift # 누름·끌기·뗌·보조 누름 → 쓰다듬기·집기·던지기·펫 메뉴·물건 클릭
 │   │   ├── Stage/
 │   │   │   ├── SceneComposer.swift    # 펫·무기·물건 → 그리기 목록 (발 맞춤·반전 보정·말풍선 숨김·모자·발자국)
-│   │   │   └── SceneDrawings.swift    # PetDrawing<Frame>, ProjectileDrawing, ItemDrawing
+│   │   │   ├── SceneDrawings.swift    # PetDrawing<Frame>, ProjectileDrawing, ItemDrawing
+│   │   │   └── PixelCanvas.swift      # 직접 그리는 플랫폼용 합성기: 최근접 확대·반전·위 가리기·투명도·바뀐 영역
 │   │   ├── Settings/
 │   │   │   ├── PetSettings.swift      # 설정 항목·기본값·허용 값 (펫 고유 ID petIDs 포함)
 │   │   │   └── SettingsStore.swift    # 저장소 약속 + JSON 파일 저장소(윈도우 %APPDATA%\DeskPet\settings.json)
@@ -149,7 +150,9 @@ private/
 │       │   └── WindowsCoordinates.swift # 가상 화면(왼쪽 위, 아래 +y) ↔ 공통 좌표(왼쪽 아래, 위 +y)
 │       ├── Menu/TrayMenu.swift        # 트레이 아이콘, MenuNode → HMENU, 메시지 상자 대화(이름 입력은 3단계)
 │       ├── Skin/WinSprite.swift       # PNGDecoder → 미리 곱한 BGRA
-│       └── Stage/HeadlessStage.swift  # 2c 전까지: 그리기 목록만 만들고 화면에는 안 그림
+│       └── Stage/
+│           ├── OverlayStage.swift     # 모니터마다 오버레이, 공통 그리기 목록을 픽셀 자리로 (PetStage)
+│           └── LayeredOverlay.swift   # 투명·최상위·클릭 관통 창, DIB + 바뀐 영역만 UpdateLayeredWindowIndirect
 ├── Assets/Skins/                  # 캐릭터 23종 (공개 19종 + 로컬 전용 Boy·Girl·Goblin·Radish), Nabi·Bolt는 SpriteForge 생성물
 ├── Assets/Rigs/                   # SpriteForge 원본: 리그(<이름>.rig.json), 원본 스킨 매달리기(<스킨>.hang.json), 시트 가져오기(<이름>.import.json)
 ├── Assets/Sources/                # 가져온 무료 에셋 원본 줄 PNG와 출처·라이선스 메모 (PixelAdventure1, SunnyLand, NinjaAdventure, DungeonTilesetII)
@@ -283,7 +286,7 @@ tail -f ~/Library/Logs/DeskPet/pet_debug.log
   * 1단계: GitHub Actions `Core portability`가 Windows·Linux에서 `swift build`(DeskPetCore)와 `scripts/verify.sh`를 돌린다. 맥 밖에서는 스킨을 공통 `PNGDecoder`로 읽고, SpriteForge 일치 검사는 건너뛴다.
   * 맥에서 윈도우와 같은 스킨 경로를 돌려 보려면 검사를 `-D PORTABLE_CHECKS`로 컴파일한다. 맥 검사는 `PNGDecoder`가 모든 스킨 PNG를 Core Graphics와 같은 픽셀로 읽는지도 확인한다.
   * 2a: 시계(`HabitatLoop`)·끌기 판정·설정·그리기 목록·메뉴 데이터가 Core에 있다. 맥 껍데기는 읽기(`DesktopSource`·`HostSenses`)·그리기(`PetStage`)·메뉴 렌더링·대화 상자·`UserDefaults`만 맡는다. 윈도우판은 같은 약속을 Win32로 구현한다(설계 명세 5.4).
-  * 2b: 윈도우에서는 `swift build`가 `DeskPet.exe`(Core + Windows)를 만든다. CI 연기 시험은 메모장을 띄우고 `DeskPet.exe --smoke 8 --report smoke.json`을 돌려 모니터·창 목록·펫·트레이·틱 수를 확인한다(보고서와 로그는 아티팩트 `windows-smoke`). 아직 화면에 그리지 않는다(2c).
+  * 2b: 윈도우에서는 `swift build`가 `DeskPet.exe`(Core + Windows)를 만든다. CI 연기 시험은 메모장을 띄우고 `DeskPet.exe --smoke 8 --report smoke.json`을 돌려 모니터·창 목록·펫·트레이·틱 수를 확인한다(보고서와 로그는 아티팩트 `windows-smoke`). 2c부터 모니터마다 투명 창에 펫을 그리고, 연기 시험이 보이는 픽셀 수를 확인하며 화면을 캡처한다(`screen.png`).
 * XCTest는 Command Line Tools만 설치된 환경에서 쓸 수 없어 `scripts/checks/` 실행 파일로 검증한다. `swift build` 때 나오는 `could not determine XCTest paths` 경고는 같은 이유이며 빌드에 영향 없음.
 
 ---
