@@ -62,8 +62,9 @@ jobs:
           if (-not ($r.windows | Where-Object { $_.owner -like '*notepad*' })) { throw "notepad window not listed" }
           if ($r.pets.Count -lt 1) { throw "no pets" }
           if ($r.drawings -lt 1) { throw "no drawings composed" }
-          # 8초 동안 60Hz면 약 480틱. 타이머 간격이 늘어나면 걸림
-          if ($r.ticks -lt 380) { throw "too few ticks: $($r.ticks) in 8s" }
+          # 8초 동안 60Hz면 약 480틱. 2코어 러너에서 디버그 빌드가 그리는 동안 캡처까지 돌면 350~410틱.
+          # 타이머가 예전처럼 31ms로 늘어나면(약 290틱) 걸리게 300을 바닥으로 둠
+          if ($r.ticks -lt 300) { throw "too few ticks: $($r.ticks) in 8s" }
           $visible = ($r.overlays | Measure-Object -Property visiblePixels -Sum).Sum
           if ($visible -lt 100) { throw "overlays show almost nothing: $visible pixels" }
           Write-Host "tray icon shown: $($r.tray), visible pet pixels: $visible"
