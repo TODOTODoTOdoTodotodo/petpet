@@ -9,7 +9,7 @@ final class WindowsDesktop: DesktopSource {
     private let ownPID = GetCurrentProcessId()
     /// 발판으로 쓰지 않을 창 종류 (바탕 화면, 작업 표시줄, DeskPet 자신)
     private static let ignoredClasses: Set<String> = [
-        "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", WindowsApp.windowClass,
+        "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", WindowsApp.windowClass, LayeredOverlay.windowClass,
     ]
     /// 이보다 작은 창은 제외
     private let minimumWindowSide: CGFloat = 100
@@ -29,16 +29,14 @@ final class WindowsDesktop: DesktopSource {
             var info = MONITORINFO()
             info.cbSize = DWORD(MemoryLayout<MONITORINFO>.size)
             guard GetMonitorInfoW(monitor, &info) else { return nil }
-            var dpiX: UINT = 96
-            var dpiY: UINT = 96
-            _ = GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY)
             let primary = info.dwFlags & DWORD(MONITORINFOF_PRIMARY) != 0
             return ScreenArea(
                 id: UInt32(truncatingIfNeeded: UInt(bitPattern: monitor)),
                 name: "Display \(index + 1)" + (primary ? " (primary)" : ""),
                 frame: coordinates.rect(info.rcMonitor),
                 visibleFrame: coordinates.rect(info.rcWork),
-                backingScale: CGFloat(dpiX) / 96
+                // 공통 좌표 1단위는 주 모니터 기준 픽셀 수로 그려짐
+                backingScale: coordinates.unit
             )
         }
     }

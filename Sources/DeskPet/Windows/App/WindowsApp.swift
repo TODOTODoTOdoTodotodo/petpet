@@ -41,7 +41,7 @@ final class WindowsApp {
     private let skinsDirectory: URL
     private let roster = PetRoster()
     private let desktop = WindowsDesktop()
-    private let stage = HeadlessStage()
+    private let stage = OverlayStage()
     private let loop: HabitatLoop
     private let tray: TrayMenu
     private let treasuryStore = TreasuryStore(archive: FileTreasuryArchive())
@@ -75,6 +75,7 @@ final class WindowsApp {
         loop.onEvent = log
         loop.gesture.onEvent = log
         loop.quietDuringCalls = settings.quietDuringCalls
+        stage.opacity = settings.opacity
         treasuryStore.onEvent = log
         let treasury = treasuryStore.load()
         log("🎒 collection: \(treasury.total) items, \(treasury.counts.count) kinds")
@@ -146,6 +147,7 @@ final class WindowsApp {
         guard !isQuitting else { return }
         isQuitting = true
         tray.remove()
+        stage.close()
         WindowsLogger.shared.log("👋 quit")
         PostQuitMessage(0)
     }
@@ -167,6 +169,7 @@ final class WindowsApp {
                 ["id": $0.id, "look": $0.appearance.name, "x": Double($0.position.x), "y": Double($0.position.y), "behavior": $0.behavior.name]
             },
             "drawings": stage.lastDrawings,
+            "overlays": stage.summary,
             "menuRows": appMenu.nodes().count,
             "tray": tray.isShown,
             "ticks": ticks,
@@ -191,8 +194,9 @@ extension WindowsApp: AppMenuHost {
         switch command {
         case .toggle(.quietDuringCalls):
             loop.quietDuringCalls = settings.quietDuringCalls
+        case .opacity:
+            stage.opacity = settings.opacity
         default:
-            // 투명도는 무대가 그리기 시작하는 2c에서
             break
         }
     }

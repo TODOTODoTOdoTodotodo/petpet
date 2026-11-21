@@ -34,6 +34,7 @@ struct CheckRunner {
         HabitatChecks.run(check)
         SettingsChecks.run(check)
         SceneChecks.run(check)
+        CanvasChecks.run(check)
         ThrowAimChecks.run(check)
         HeadTrackerChecks.run(check, skinsDirectory: skins)
         AppMenuChecks.run(check, skinsDirectory: skins)

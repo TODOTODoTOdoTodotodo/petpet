@@ -32,7 +32,7 @@ jobs:
       - name: Checks
         shell: bash
         run: scripts/verify.sh
-      # 연기 시험: 메모장을 띄우고 DeskPet.exe를 8초 돌려, 모니터·창 목록·펫·트레이 보고서를 확인함
+      # 연기 시험: 메모장을 띄우고 DeskPet.exe를 8초 돌려, 모니터·창 목록·펫·트레이·그린 픽셀을 확인하고 화면을 캡처함
       - name: Smoke test (DeskPet.exe)
         shell: pwsh
         timeout-minutes: 3
@@ -42,8 +42,18 @@ jobs:
           $bin = (swift build --show-bin-path).Trim()
           Start-Process notepad
           Start-Sleep -Seconds 3
-          & "$bin\DeskPet.exe" --smoke 8 --report smoke.json
-          if (-not (Test-Path smoke.json)) { throw "no smoke report (exit code $LASTEXITCODE)" }
+          $app = Start-Process -FilePath "$bin\DeskPet.exe" -ArgumentList '--smoke', '8', '--report', 'smoke.json' -PassThru -NoNewWindow
+          # 펫이 내려앉은 뒤 화면 캡처 (레이어드 창은 CaptureBlt가 있어야 찍힘)
+          Start-Sleep -Seconds 5
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $screen = [System.Windows.Forms.SystemInformation]::VirtualScreen
+          $shot = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($shot)
+          $graphics.CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size,
+            [System.Drawing.CopyPixelOperation]::SourceCopy -bor [System.Drawing.CopyPixelOperation]::CaptureBlt)
+          $shot.Save("$pwd\screen.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $app.WaitForExit()
+          if (-not (Test-Path smoke.json)) { throw "no smoke report (exit code $($app.ExitCode))" }
           Get-Content smoke.json
           $r = Get-Content smoke.json -Raw | ConvertFrom-Json
           if ($r.displays.Count -lt 1) { throw "no displays" }
@@ -52,7 +62,9 @@ jobs:
           if ($r.drawings -lt 1) { throw "no drawings composed" }
           # 8초 동안 60Hz면 약 480틱. 타이머 간격이 늘어나면 걸림
           if ($r.ticks -lt 380) { throw "too few ticks: $($r.ticks) in 8s" }
-          Write-Host "tray icon shown: $($r.tray)"
+          $visible = ($r.overlays | Measure-Object -Property visiblePixels -Sum).Sum
+          if ($visible -lt 100) { throw "overlays show almost nothing: $visible pixels" }
+          Write-Host "tray icon shown: $($r.tray), visible pet pixels: $visible"
       - name: Upload smoke report
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,6 +72,7 @@ jobs:
           name: windows-smoke
           path: |
             smoke.json
+            screen.png
             ${{ runner.temp }}\deskpet\Logs\pet_debug.log
           if-no-files-found: ignore
 
