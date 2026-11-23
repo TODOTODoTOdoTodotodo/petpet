@@ -108,14 +108,22 @@ final class SmokeDriver {
             notes.append("GetWindowRect failed \(GetLastError())")
             return true
         }
-        // 맨 앞으로 올리며 옮김 (HWND_TOP = nil). 뒤 창이면 내려가다 윗변이 앞 창에 가려져 펫이 정상적으로 떨어짐
-        let flags = UINT(SWP_NOSIZE) | UINT(SWP_NOACTIVATE)
+        // 처음에 맨 앞으로 올림. 뒤 창이면 내려가다 윗변이 앞 창에 가려져 펫이 정상적으로 떨어짐
+        if moved == 0 { raise(window) }
+        let flags = UINT(SWP_NOSIZE) | UINT(SWP_NOZORDER) | UINT(SWP_NOACTIVATE)
         if !SetWindowPos(window, nil, rect.left + Self.windowStep.x, rect.top + Self.windowStep.y, 0, 0, flags) {
             notes.append("SetWindowPos failed \(GetLastError())")
             return true
         }
         moved += 1
         return moved >= Self.windowSteps
+    }
+
+    /// 다른 프로세스 창은 HWND_TOP만으로는 앞으로 오지 않음(전경 잠금). 잠깐 최상위로 올렸다 내리면 일반 창 맨 앞에 남음
+    private func raise(_ window: HWND) {
+        let flags = UINT(SWP_NOMOVE) | UINT(SWP_NOSIZE) | UINT(SWP_NOACTIVATE)
+        _ = SetWindowPos(window, HWND(bitPattern: -1), 0, 0, 0, 0, flags)  // HWND_TOPMOST
+        _ = SetWindowPos(window, HWND(bitPattern: -2), 0, 0, 0, 0, flags)  // HWND_NOTOPMOST
     }
 
     private func recordFollow(_ elapsed: TimeInterval) -> Bool {
@@ -127,6 +135,7 @@ final class SmokeDriver {
         follow["petMoved"] = [rider.position.x - before.pet.x, rider.position.y - before.pet.y].map(Double.init)
         follow["stillOnWindow"] = rider.support?.owner.windowID == windowID
         follow["windowSteps"] = moved
+        follow["windowInFront"] = world().windows.first?.id == windowID
         return true
     }
 
