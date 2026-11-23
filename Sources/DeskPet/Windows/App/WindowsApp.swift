@@ -132,7 +132,7 @@ final class WindowsApp {
             log("🧪 smoke driver on")
         }
         if options.smokeSeconds != nil, options.stagesScene {
-            probe = SceneProbe(roster: roster, world: { [unowned self] in self.loop.world }, isReady: { [unowned self] in
+            probe = SceneProbe(roster: roster, treasury: treasury, world: { [unowned self] in self.loop.world }, isReady: { [unowned self] in
                 guard let report = self.driver?.report else { return true }
                 return (report["finishedSteps"] as? Int) == (report["totalSteps"] as? Int)
             }, perform: { [unowned self] command in

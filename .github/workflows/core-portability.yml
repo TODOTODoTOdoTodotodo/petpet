@@ -93,7 +93,7 @@ jobs:
           $s = $r.scene
           $drawn = $r.stage.mostDrawn
           Write-Host "scene notes: $($s.notes -join '; '), drawn: $($drawn | ConvertTo-Json -Compress)"
-          foreach ($layer in 'hats', 'held', 'bubbles', 'items', 'glints', 'weapons') {
+          foreach ($layer in 'hats', 'held', 'bubbles', 'items', 'glints', 'weapons', 'sparks') {
             if (-not $drawn.$layer) { throw "nothing drawn on layer '$layer'" }
           }
           if (-not ($drawn.bursts -or $drawn.dust)) { throw "weapons never burst" }

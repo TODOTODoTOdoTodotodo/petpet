@@ -1,8 +1,9 @@
 import Foundation
 import WinSDK
 
-/// This object is responsible for the phase-3 part of the Windows smoke test (`--smoke N --scene`): it dresses a pet
-/// (hat, held item, an emoji speech bubble), and once the pointer driver is done it has the pet throw a weapon that hits
+/// This object is responsible for the phase-3 part of the Windows smoke test (`--smoke N --scene`): it raises a pet to the
+/// naming level (in the runner's throwaway collection), dresses it (hat, held item, an emoji speech bubble, Lv.5 footstep
+/// sparkles), and once the pointer driver is done it has the pet throw a weapon that hits
 /// and one that misses, drops an item and clicks it with real input, and names the pet through the menu's text prompt,
 /// filling the prompt like a person would. What happened goes into the smoke report; what got drawn is the stage's.
 /// It only runs on the CI runner; a normal launch never creates it.
@@ -11,6 +12,7 @@ final class SceneProbe {
     static let typedName = "나비짱"
 
     private let roster: PetRoster
+    private let treasury: Treasury
     private let world: () -> World
     private let isReady: () -> Bool
     /// 앱 메뉴 명령을 메시지 루프에서 실행 (입력 창은 모달이라 틱 안에서 바로 열지 않음)
@@ -26,8 +28,9 @@ final class SceneProbe {
     private var notes: [String] = []
     private var results: [String: Any] = [:]
 
-    init(roster: PetRoster, world: @escaping () -> World, isReady: @escaping () -> Bool, perform: @escaping (MenuCommand) -> Void) {
+    init(roster: PetRoster, treasury: Treasury, world: @escaping () -> World, isReady: @escaping () -> Bool, perform: @escaping (MenuCommand) -> Void) {
         self.roster = roster
+        self.treasury = treasury
         self.world = world
         self.isReady = isReady
         self.perform = perform
@@ -61,10 +64,17 @@ final class SceneProbe {
         { $0 >= seconds }
     }
 
-    /// 첫 펫에 모자·든 물건 (저장하지 않음, 그리기만 확인)
+    /// 첫 펫을 이름 지을 수 있는 레벨까지 올리고(시험용 빈 도감) 모자·든 물건을 씌움 (모자·소품은 저장하지 않음, 그리기만 확인)
     private func dress(_ elapsed: TimeInterval) -> Bool {
         guard let first = roster.residents.first ?? roster.pets.first else { return elapsed > 5 }
         pet = first
+        if let keeperID = first.keeperID {
+            // 안아 올리기(.pickup)는 하루 상한이 없음. 2개씩이라 75번이면 150개(Lv.6)
+            while treasury.level(of: keeperID) < Treasury.nameLevel { treasury.award(.pickup, to: keeperID, on: "smoke") }
+            first.level = treasury.level(of: keeperID)
+            first.sparkleTier = Treasury.sparkleTier(forHearts: treasury.hearts(of: keeperID))
+        }
+        results["level"] = first.level
         first.hat = HatCatalog.all.first
         first.heldItem = ItemCatalog.all.first
         results["pet"] = first.id
@@ -84,14 +94,20 @@ final class SceneProbe {
         return true
     }
 
-    /// 물건을 떨어뜨리고 놓일 때까지 기다림 (4초까지)
+    /// 펫 옆 위쪽에서 물건을 떨어뜨리고 놓일 때까지 기다림 (4초까지). 자리 고르기는 Core 검사가 맡고 여기서는 그리기·클릭만
     private func dropItem(_ elapsed: TimeInterval) -> Bool {
         if item == nil {
-            item = roster.finding.drop(ItemCatalog.all.dropFirst().first, in: world(), pets: roster.pets, screenID: nil)
-            if item == nil {
-                notes.append("no ledge to drop an item on")
+            guard let pet, let kind = ItemCatalog.all.dropFirst().first,
+                  let screen = world().screens.first(where: { $0.frame.contains(pet.position) }) ?? world().screens.first else {
+                notes.append("no screen to drop an item on")
                 return true
             }
+            let side = 8 * pet.scale
+            let away = pet.position.x + (pet.position.x < screen.frame.midX ? 140 : -140)
+            let dropped = DroppedItem(id: "I-probe", kind: kind, scale: pet.scale,
+                                      position: CGPoint(x: away, y: screen.visibleFrame.maxY - side - 4))
+            roster.finding.release(dropped)
+            item = dropped
         }
         if item?.isResting == true { return true }
         if elapsed > 4 { notes.append("item never came to rest") }
