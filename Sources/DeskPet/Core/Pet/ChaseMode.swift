@@ -12,6 +12,8 @@ struct ChaseTarget: Equatable {
     var anchorX: CGFloat?
     /// 걸어서 따라갈 지점 (마우스 포인터 모드에서만)
     var point: CGPoint?
+    /// 다른 모니터의 펫을 쫓는 곳으로 모을지 (알아서 놀기면 모으지 않음)
+    var gathers = true
 
     static let none = ChaseTarget()
 }
@@ -92,9 +94,24 @@ final class PointerChase: ChaseMode {
     }
 }
 
+/// This object is responsible for chasing nothing: the pets roam and play on their own, without leaping
+/// to the window the user works in, walking after the pointer, or gathering on another display.
+final class FreeRoamChase: ChaseMode {
+    static let key = "free"
+    var key: String { Self.key }
+
+    func target(in world: World, cursor: CGPoint?, dt: TimeInterval) -> ChaseTarget {
+        ChaseTarget(gathers: false)
+    }
+}
+
 /// 설정 이름으로 쫓기 방식을 만듦 (모르는 이름이면 활성 창)
 enum ChaseModes {
     static func make(_ key: String?) -> ChaseMode {
-        key == PointerChase.key ? PointerChase() : ActiveWindowChase()
+        switch key {
+        case PointerChase.key: PointerChase()
+        case FreeRoamChase.key: FreeRoamChase()
+        default: ActiveWindowChase()
+        }
     }
 }

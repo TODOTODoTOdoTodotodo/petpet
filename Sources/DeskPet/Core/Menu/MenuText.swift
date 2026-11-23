@@ -26,7 +26,7 @@ enum MenuLanguage: String, CaseIterable {
 enum MenuText: CaseIterable {
     case language
     case rightClickHint
-    case chase, chaseActiveWindow, chasePointer
+    case chase, chaseActiveWindow, chasePointer, chaseNothing
     case skillJumps, followDisplay, quietDuringCalls, tireWithUsage, reactToTyping, pointerPranks, breakReminders
     case petSize, opacity
     case scheduleBubbles, hideScheduleTitles, allowCalendarAccess
@@ -89,6 +89,7 @@ enum MenuText: CaseIterable {
         case .chase: ("Chase", "따라갈 곳")
         case .chaseActiveWindow: ("Active Window", "보는 창")
         case .chasePointer: ("Mouse Pointer", "마우스 포인터")
+        case .chaseNothing: ("Nothing (Free Roam)", "없음 (알아서 놀기)")
         case .skillJumps: ("Skill Jumps", "스킬 도약")
         case .followDisplay: ("Follow To Display", "모니터 따라가기")
         case .quietDuringCalls: ("Quiet During Calls", "통화 중 조용히")

@@ -55,6 +55,10 @@ enum AppMenuChecks {
         check.expect(settings.scale == 2.0 && roster.residents.allSatisfy { $0.scale == 2.0 }, "크기 바꾸면 펫도 바뀜")
         menu.perform(.chase(PointerChase.key))
         check.expect(settings.chaseMode == PointerChase.key && roster.chase is PointerChase, "쫓을 것 바꾸기")
+        menu.perform(.chase(FreeRoamChase.key))
+        let freeChecked = menu.nodes().find(MenuText.chaseNothing.text(in: .english))?.checked == true
+        check.expect(settings.chaseMode == FreeRoamChase.key && roster.chase is FreeRoamChase && freeChecked,
+                     "따라갈 곳 없음(알아서 놀기): 저장·적용·체크")
         if case .submenu(let levels, _)? = menu.nodes().find(MenuText.throwAccuracy.text(in: .english))?.kind {
             check.expect(levels.count == 4 && levels.first(where: \.checked)?.title == MenuText.accuracy(.often, in: .english),
                          "던지기 정확도: 4단계, 기본 자주 명중 체크")

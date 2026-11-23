@@ -85,7 +85,7 @@ private/
 │   │   │   ├── PersonalSpace.swift    # 겹치지 않기: 길 막은 펫 찾기, 겹친 펫 비켜 서기·밀어내기, 결투 받기
 │   │   │   ├── SkillCoordinator.swift # 보고 있는 창이 바뀌면 이전 창의 펫은 바로, 아니면 한가한 펫 하나를 스킬 도약시킴 (30초 간격)
 │   │   │   ├── FocusShift.swift       # 창이 바뀐 순간 알림(FocusTracker), 앱 종류 규칙표(AppCategory)
-│   │   │   ├── ChaseMode.swift        # 쫓아다닐 것: 활성 창(ActiveWindowChase) / 마우스 포인터(PointerChase)
+│   │   │   ├── ChaseMode.swift        # 쫓아다닐 것: 활성 창(ActiveWindowChase) / 마우스 포인터(PointerChase) / 없음(FreeRoamChase)
 │   │   │   ├── Projectile.swift       # 닿지 않는 포인터에 던지는 무기(종류별 도트·궤적)
 │   │   │   ├── ThrowAim.swift         # 던지기 정확도 단계(메뉴)·캐릭터 성격(aim)·빗나간 곳
 │   │   │   ├── AttentionCoordinator.swift # 창을 바꾸면 쉬는 펫들이 돌아보고 앱 종류별 한마디

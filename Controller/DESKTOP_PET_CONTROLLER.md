@@ -256,9 +256,10 @@
 - 상태줄은 Claude Code가 화면을 갱신할 때만 돌아서, 한동안 Claude Code를 안 쓰면 파일이 갱신되지 않는다. 초기화 시각은 파일에 있으므로 시각이 지나면 DeskPet이 스스로 평소대로 되돌린다.
 
 ### 6.11 쫓아다닐 것: 활성 창 / 마우스 포인터 (`ChaseMode`, 2026-11-19 추가)
-- 메뉴 **Chase ▸ Active Window**(기본) / **Mouse Pointer**. 설정 `chaseMode`(`activeWindow`/`pointer`)로 저장한다.
+- 메뉴 **Chase ▸ Active Window**(기본) / **Mouse Pointer** / **Nothing (Free Roam)**. 설정 `chaseMode`(`activeWindow`/`pointer`/`free`)로 저장한다.
 - `ChaseMode`가 틱마다 `ChaseTarget`(도약할 창, 모일 모니터, 모일 가로 위치, 걸어갈 지점)을 낸다. 스킬 도약(6.6), 자주 찾아가기, 모니터 따라오기(`DisplayFollowCoordinator`), 전령 등장 모니터가 이것만 본다. 앱 반응(돌아보기·한마디·작업 리듬, 6.7·6.9)은 모드와 상관없이 실제로 보는 창 기준이다.
 - **활성 창** (`ActiveWindowChase`): 지금까지와 같음. 보고 있는 창, 그 창의 모니터.
+- **없음, 알아서 놀기** (`FreeRoamChase`, 2026-11-23 추가): 빈 `ChaseTarget`에 `gathers = false`. 활성 창 도약·포인터 쫓기·던지기·모니터 모으기를 모두 하지 않는다. 걷기·오르기·펫끼리 놀기·줍기·앱 반응은 그대로. 물건은 보는 창의 모니터(없으면 주 모니터)에 떨어진다.
 - **마우스 포인터** (`PointerChase`):
   - 도약할 창 = 포인터 바로 아래(같은 x)에서 처음 만나는 보이는 윗변의 창(`World.ledge(under:)`). 포인터가 그 위에 **0.6초** 머물러야 바뀐다(창 위를 스쳐 지나가면 그대로). 포인터 아래가 바닥이면 도약할 창이 없다. 메뉴바에 포인터를 두면 최대화 창 윗변이 골라져 빼꼼한다.
   - 모일 모니터 = 포인터가 있는 모니터(5초 머물면 나머지 펫이 건너옴).

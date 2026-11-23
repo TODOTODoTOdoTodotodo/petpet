@@ -58,6 +58,7 @@ final class AppMenu {
         nodes.append(.submenu(text(.chase), [
             .command(text(.chaseActiveWindow), .chase(ActiveWindowChase.key), checked: settings.chaseMode == ActiveWindowChase.key),
             .command(text(.chasePointer), .chase(PointerChase.key), checked: settings.chaseMode == PointerChase.key),
+            .command(text(.chaseNothing), .chase(FreeRoamChase.key), checked: settings.chaseMode == FreeRoamChase.key),
         ]))
         nodes += [
             .command(text(.skillJumps), .toggle(.skillJumps), checked: settings.skillJumpsEnabled),

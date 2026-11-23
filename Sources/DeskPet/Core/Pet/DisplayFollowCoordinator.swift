@@ -25,7 +25,7 @@ final class DisplayFollowCoordinator {
             activeScreenID = screenID
             activeSince = clock
         }
-        guard isEnabled, !quiet, world.screens.count > 1,
+        guard isEnabled, chased.gathers, !quiet, world.screens.count > 1,
               let screen = world.screens.first(where: { $0.id == activeScreenID }),
               clock - activeSince >= Self.settleDelay, clock - lastMove >= Self.interval else { return }
 

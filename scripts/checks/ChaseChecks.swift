@@ -1,6 +1,6 @@
 import Foundation
 
-/// This object is responsible for checking what the pets chase: the active window (default) or the mouse pointer,
+/// This object is responsible for checking what the pets chase: the active window (default), the mouse pointer or nothing,
 /// with the pointer mode settling on the window right under the pointer, walking toward it, stepping down to it,
 /// leaping onto it, gathering on the pointer's display, and jumping at or throwing weapons at a pointer out of reach.
 enum ChaseChecks {
@@ -12,11 +12,12 @@ enum ChaseChecks {
         crossingToPointerDisplay(check)
         projectileFlight(check)
         outOfReach(check)
+        freeRoam(check)
     }
 
-    private static func roster(seed: UInt64, pointer: Bool = true) -> PetRoster {
+    private static func roster(seed: UInt64, pointer: Bool = true, mode: String? = nil) -> PetRoster {
         let roster = PetRoster(planner: BehaviorPlanner(random: SeededRandomSource(seed: seed)))
-        roster.chase = ChaseModes.make(pointer ? PointerChase.key : ActiveWindowChase.key)
+        roster.chase = ChaseModes.make(mode ?? (pointer ? PointerChase.key : ActiveWindowChase.key))
         return roster
     }
 
@@ -242,5 +243,36 @@ enum ChaseChecks {
             roster.step(dt: Sim.dt, in: world, cursor: CGPoint(x: 900, y: 600))
             check.expect(roster.projectiles.count == PetRoster.maxProjectiles, "동시에 나는 무기는 8개까지", "\(roster.projectiles.count)")
         }
+    }
+
+    private static func freeRoam(_ check: Checker) {
+        check.section("알아서 놀기: 아무것도 쫓지 않음")
+        let free = ChaseModes.make(FreeRoamChase.key)
+        let world = Sim.world(windows: [Sim.window(9, 1000, 300, 400, 250)])
+        world.focus(processID: 9)
+        let target = free.target(in: world, cursor: CGPoint(x: 1200, y: 700), dt: Sim.dt)
+        check.expect(free.key == FreeRoamChase.key && target.windowID == nil && target.clingWindowID == nil
+                     && target.point == nil && !target.gathers,
+                     "활성 창·포인터 모두 무시, 모니터 모으기 없음", "\(target)")
+
+        // 포인터·활성 창이 다른 모니터에 있어도 건너가지 않고, 포인터를 쫓거나 던지지 않음
+        let right = ScreenArea(id: 2, name: "Right", frame: CGRect(x: 1600, y: 0, width: 1600, height: 1000),
+                               visibleFrame: CGRect(x: 1600, y: 0, width: 1600, height: 975), backingScale: 2)
+        let twoScreens = Sim.world(screens: [Sim.main, right], windows: [Sim.window(9, 2200, 300, 600, 300)])
+        twoScreens.focus(processID: 9)
+        let roster = Self.roster(seed: 68, mode: FreeRoamChase.key)
+        var events: [String] = []
+        roster.onEvent = { events.append($0) }
+        let pet = restingPet(in: roster, world: twoScreens, x: 400)
+        var names: Set<String> = []
+        run(roster, in: twoScreens, cursor: CGPoint(x: 2600, y: 900), seconds: DisplayFollowCoordinator.settleDelay + 20) {
+            names.insert(pet.behavior.name)
+            return false
+        }
+        check.expect(!events.contains { $0.contains("following to display") }, "다른 모니터로 모이지 않음", "\(events.filter { $0.contains("🌀") })")
+        check.expect(!names.contains("chasingPointer") && !names.contains("throwing") && !events.contains { $0.contains("threw") },
+                     "포인터를 쫓거나 던지지 않음", "\(names.sorted())")
+        check.expect(pet.perchWindowID != 9, "활성 창으로 도약하지 않음")
+        check.expect(names.count >= 2, "혼자 여러 행동을 함", "\(names.sorted())")
     }
 }
