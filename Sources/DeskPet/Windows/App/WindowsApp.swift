@@ -1,10 +1,11 @@
 import Foundation
 import WinSDK
 
-/// 실행 옵션 (`--smoke 초`: 그 시간만 돌고 보고서를 남긴 뒤 끝남, `--report 경로`)
+/// 실행 옵션 (`--smoke 초`: 그 시간만 돌고 보고서를 남긴 뒤 끝남, `--report 경로`, `--drive`: 연기 시험 중 창 옮기기·펫 누르기)
 struct LaunchOptions {
     var smokeSeconds: TimeInterval?
     var reportPath = "deskpet-smoke.json"
+    var drivesInput = false
 
     init(arguments: [String]) {
         var index = 1
@@ -17,6 +18,8 @@ struct LaunchOptions {
             case "--report":
                 if let next { reportPath = next }
                 index += 1
+            case "--drive":
+                drivesInput = true
             default:
                 break
             }
@@ -26,8 +29,8 @@ struct LaunchOptions {
 }
 
 /// This object is responsible for the Windows app: wiring the shared pieces (settings, skins, pets, collection,
-/// status menu, habitat loop) to the Windows readers, the tray menu and a hidden message window,
-/// stepping the loop on each 60Hz frame tick, and applying the settings only the shell owns.
+/// status menu, habitat loop) to the Windows readers, the overlays' pointer input, the tray and pet menus and a
+/// hidden message window, stepping the loop on each 60Hz frame tick, and applying the settings only the shell owns.
 final class WindowsApp {
     /// 숨은 메시지 창의 클래스 이름 (창 목록에서 제외)
     static let windowClass = "DeskPetHost"
@@ -44,6 +47,8 @@ final class WindowsApp {
     private let stage = OverlayStage()
     private let loop: HabitatLoop
     private let tray: TrayMenu
+    private let pointerInput: OverlayPointerInput
+    private var driver: SmokeDriver?
     private let treasuryStore = TreasuryStore(archive: FileTreasuryArchive())
     private var collection: CollectionMenu!
     private var lineup: PetLineup<WinSprite>!
@@ -60,6 +65,7 @@ final class WindowsApp {
         library = SkinLibrary(directory: skinsDirectory, loader: WinSprite.load)
         loop = HabitatLoop(roster: roster, desktop: desktop, senses: WindowsHostSenses(), stage: stage)
         tray = TrayMenu(window: window)
+        pointerInput = OverlayPointerInput(gesture: loop.gesture)
     }
 
     func start() {
@@ -73,7 +79,11 @@ final class WindowsApp {
         roster.onEvent = log
         roster.messengerLook = { [weak self] in self?.lineup.nextMessengerLook() }
         loop.onEvent = log
-        loop.gesture.onEvent = log
+        loop.gesture.onEvent = { [weak self] event in
+            log(event)
+            self?.driver?.recordGesture(event)
+        }
+        LayeredOverlay.onMouse = { [unowned self] window, message in self.pointerInput.handle(window, message) }
         loop.quietDuringCalls = settings.quietDuringCalls
         stage.opacity = settings.opacity
         treasuryStore.onEvent = log
@@ -99,10 +109,20 @@ final class WindowsApp {
                           collection: { [unowned self] in self.collection.menuNode() },
                           handlers: [lineup, collection])
         appMenu.applySettingsToPets()
+        // 펫을 우클릭한 자리에 그 펫의 메뉴 (고른 항목은 트레이 메뉴처럼 WM_COMMAND로)
+        loop.gesture.onContextMenu = { [unowned self] pet, _ in
+            let nodes = self.lineup.petMenu(for: pet)
+            self.driver?.menuOpened(rows: nodes.count)
+            self.tray.popUp(nodes)
+        }
         lineup.restore()
         collection.syncPets()
 
         log(tray.show(tip: "DeskPet") ? "🔔 tray icon shown" : "⚠️ tray icon failed")
+        if options.smokeSeconds != nil, options.drivesInput {
+            driver = SmokeDriver(roster: roster) { [unowned self] in self.loop.world }
+            log("🧪 smoke driver on")
+        }
         loop.tick(now: ProcessInfo.processInfo.systemUptime)
     }
 
@@ -118,6 +138,8 @@ final class WindowsApp {
             if let command = tray.command(for: UINT(truncatingIfNeeded: wParam & 0xFFFF)) {
                 appMenu.perform(command)
             }
+        case UINT(WM_TIMER) where wParam == TrayMenu.menuTimerID:
+            tick()
         case UINT(WM_INITMENUPOPUP):
             if let notice = tray.openNotice(for: wParam) { appMenu.perform(notice) }
         case taskbarCreated:
@@ -136,6 +158,7 @@ final class WindowsApp {
         guard !isQuitting else { return }
         let now = ProcessInfo.processInfo.systemUptime
         loop.tick(now: now)
+        driver?.tick(now: now)
         ticks += 1
         if let seconds = options.smokeSeconds, now - startedAt >= seconds {
             writeSmokeReport()
@@ -173,6 +196,7 @@ final class WindowsApp {
             "menuRows": appMenu.nodes().count,
             "tray": tray.isShown,
             "ticks": ticks,
+            "drive": driver?.report ?? [:],
             "settingsFile": WindowsPaths.settingsFile.path,
             "log": WindowsLogger.shared.fileURL.path,
         ]

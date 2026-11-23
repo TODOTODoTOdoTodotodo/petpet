@@ -58,7 +58,8 @@ struct PremultipliedImage {
 /// This object is responsible for software compositing on a premultiplied BGRA surface for platforms
 /// that draw sprites themselves (Windows layered windows): clearing regions, and drawing a sprite scaled
 /// with nearest-neighbor sampling (pixel art stays sharp), mirrored or flipped, with its top part hidden
-/// and with extra transparency, blended over what is already there. It also tracks what changed since
+/// and with extra transparency, blended over what is already there, plus invisible hit areas so a pet's whole
+/// grab box takes clicks. It also tracks what changed since
 /// the last upload so only that region needs to reach the screen.
 final class PixelCanvas {
     let width: Int
@@ -120,6 +121,24 @@ final class PixelCanvas {
         return area
     }
 
+    /// 클릭만 받는 칸의 알파 (레이어드 창은 알파 0 픽셀의 클릭을 뒤 창으로 넘김). 눈에는 안 보임
+    static let hitAlpha: UInt8 = 1
+
+    /// 빈 픽셀만 hitAlpha로 채워 영역 전체가 클릭을 받게 함 (그린 픽셀은 그대로). 채운 영역을 돌려줌
+    @discardableResult
+    func markHitArea(_ box: PixelBox) -> PixelBox {
+        let area = box.intersection(bounds)
+        guard !area.isEmpty else { return .empty }
+        for row in area.y..<area.maxY {
+            for column in area.x..<area.maxX {
+                let alpha = (row * width + column) * 4 + 3
+                if bgra[alpha] == 0 { bgra[alpha] = Self.hitAlpha }
+            }
+        }
+        dirty = dirty.union(area)
+        return area
+    }
+
     /// value × factor / 255 반올림 (잘라 버리면 겹칠수록 어두워짐)
     private static func scale(_ value: UInt32, _ factor: UInt32) -> UInt32 {
         (value * factor + 127) / 255
@@ -131,8 +150,8 @@ final class PixelCanvas {
         return dirty
     }
 
-    /// 보이는 픽셀 수 (연기 시험용)
+    /// 보이는 픽셀 수 (연기 시험용, 클릭만 받는 칸은 뺌)
     var visiblePixelCount: Int {
-        stride(from: 3, to: bgra.count, by: 4).reduce(0) { $0 + (bgra[$1] > 0 ? 1 : 0) }
+        stride(from: 3, to: bgra.count, by: 4).reduce(0) { $0 + (bgra[$1] > Self.hitAlpha ? 1 : 0) }
     }
 }
