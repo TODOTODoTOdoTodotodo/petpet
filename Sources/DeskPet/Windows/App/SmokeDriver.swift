@@ -10,6 +10,8 @@ final class SmokeDriver {
     /// 창을 옮기는 횟수와 한 번에 옮기는 픽셀 (Core는 한 번에 250포인트 넘게 움직이면 순간이동으로 봄)
     private static let windowSteps = 6
     private static let windowStep = (x: LONG(20), y: LONG(12))
+    /// 펫을 붙잡아 두는 시간: 창 옮기기(약 0.6초) + 기다림 1초 + 여유
+    private static let holdTime: TimeInterval = 3
 
     private let roster: PetRoster
     private let world: () -> World
@@ -77,6 +79,8 @@ final class SmokeDriver {
         let candidate = roster.pets.first { $0.isTangible && !$0.isDragged && $0.support?.owner.windowID != nil }
         if let candidate, candidate === rider, candidate.support?.owner.windowID == windowID {
             if let since = riderSince, now - since >= 0.5, let windowID, let window = world().window(id: windowID) {
+                // 창을 옮기는 동안 스스로 걷거나 밀리면 이동량이 어긋나므로 잠시 붙잡아 둠
+                candidate.switchTo(SmokeHoldBehavior(duration: Self.holdTime))
                 before = (candidate.position, window.frame)
                 follow["owner"] = window.owner
                 follow["pet"] = candidate.id
@@ -134,6 +138,7 @@ final class SmokeDriver {
         follow["stillOnWindow"] = rider.support?.owner.windowID == windowID
         follow["windowSteps"] = moved
         follow["windowInFront"] = world().windows.first?.id == windowID
+        follow["riderBehavior"] = rider.behavior.name
         return true
     }
 
@@ -228,5 +233,30 @@ final class SmokeDriver {
         input.mi.dy = LONG((Int(point.y - top) * 65535) / Int(height))
         input.mi.dwFlags = DWORD(truncatingIfNeeded: MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
         if SendInput(1, &input, Int32(MemoryLayout<INPUT>.size)) != 1 { notes.append("SendInput move failed \(GetLastError())") }
+    }
+}
+
+/// This object is responsible for keeping the smoke test's rider still while its window slides: the pet only rides
+/// along (the same `followSupport` an idle pet uses) and asks the planner what to do once the hold is over.
+/// It is neither at leisure nor an `IdleBehavior` and takes no room on the ledge, so no coordinator walks it aside,
+/// pushes it, makes it hop for a level-up or drum to typing in the middle of the measurement.
+private final class SmokeHoldBehavior: PetBehavior {
+    let name = "smokeHold"
+    let animation: AnimationKind = .idle
+    private let duration: TimeInterval
+    private var elapsed: TimeInterval = 0
+
+    init(duration: TimeInterval) {
+        self.duration = duration
+    }
+
+    func begin(_ pet: Pet) {
+        pet.velocity = .zero
+    }
+
+    func step(_ pet: Pet, in world: World, context: PetContext, dt: TimeInterval) -> PetBehavior? {
+        guard pet.followSupport(in: world) else { return AirborneBehavior.falling() }
+        elapsed += dt
+        return elapsed >= duration ? context.planner.next(after: pet, in: world, context: context) : nil
     }
 }
