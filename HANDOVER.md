@@ -298,6 +298,7 @@ tail -f ~/Library/Logs/DeskPet/pet_debug.log
 * 릴리스 올리기: `./scripts/package_app.sh` 뒤 GitHub Releases에 `DeskPet.dmg`와 `DeskPet.zip`을 함께 올린다. 터미널 한 줄 설치(`install.sh`)는 `releases/latest/download/DeskPet.zip`을 받으므로 파일 이름을 바꾸지 않는다.
   * 앱 묶음은 ad-hoc 서명(공증 없음). curl로 받은 파일에는 격리 표시가 없어 바로 열리고, 브라우저로 받은 DMG는 처음 한 번 시스템 설정 ▸ 개인정보 보호 및 보안 ▸ 그래도 열기가 필요하다.
   * `install.sh` 시험: `DESKPET_URL=file://$PWD/DeskPet.zip DESKPET_DIR=/tmp/x DESKPET_NO_LAUNCH=1 bash install.sh` (지우기는 `--uninstall`).
+  * 맥·윈도우 한 릴리스 순서: 버전(`package_app.sh`의 `CFBundleShortVersionString`)을 올리고 `./scripts/package_app.sh` → `gh release create vX.Y --draft`에 DMG·zip을 올림 → `git push origin vX.Y`로 태그를 올리면 `release-windows.yml`이 같은 초안에 `DeskPet-windows.zip`·`install.ps1`을 더함 → 네 파일 확인 뒤 초안 공개. 공개 전에는 `releases/latest`가 이전 판이라 설치 줄이 이전 판을 받음.
 * 공개 배포: `./scripts/package_app.sh`는 `scripts/private-skins.txt`의 캐릭터(Boy·Girl·Goblin·Radish, 출처·재배포 허락 미확인)를 빼고 만든다. 이 4종은 저장소에서도 추적하지 않고(`.gitignore`) 로컬에만 둔다. 개인용으로 모두 넣으려면 `--with-private`(DMG도 그 구성으로 덮어씀).
 * 종료: 메뉴바 `👾` → **Quit DeskPet**(한국어 메뉴: **DeskPet 종료**), 또는 `pkill -f DeskPet`
 * 윈도우 이식: `Controller/WINDOWS_PORT.md`. 0단계 완료 — 공통 코드는 `Sources/DeskPet/Core`(Foundation만), 맥 전용은 `Sources/DeskPet/Mac`. Core에 맥 전용 코드를 넣으면 `verify.sh`가 실패함

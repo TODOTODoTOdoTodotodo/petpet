@@ -1,6 +1,6 @@
 # DeskPet 👾
 
-macOS 화면 위에 사는 도트 펫.
+macOS·Windows 화면 위에 사는 도트 펫.
 열어 둔 창 위를 걷고, 오르고, 뛰어내림. 마우스 포인터를 쫓아오고, 물건을 주워 모음.
 
 <!-- 스크린샷·짧은 GIF 자리: 창 위를 걷는 펫, 창 흔들기, 펫 탑, 물건 줍기 -->
@@ -27,6 +27,8 @@ macOS 화면 위에 사는 도트 펫.
   - 네트워크 연결 없음.
 
 ## 설치
+
+### macOS
 
 **필요 환경**
 
@@ -58,6 +60,30 @@ Apple 공증을 거치지 않은 앱이라, 브라우저로 받은 경우 처음
 2. 시스템 설정 ▸ 개인정보 보호 및 보안
 3. 아래쪽 "DeskPet이(가) 차단되었습니다" 옆 **그래도 열기**
 4. 다시 실행 후 **열기**
+
+### Windows (시험판)
+
+**필요 환경**
+
+- Windows 10·11, 64비트 (x64)
+- 실제 PC 확인 전 단계. 자동 시험(GitHub Actions의 Windows)만 통과
+
+**PowerShell 한 줄 설치**
+
+```powershell
+irm https://github.com/TODOTODoTOdoTodotodo/petpet/releases/latest/download/install.ps1 | iex
+```
+
+- `%LOCALAPPDATA%\Programs\DeskPet`에 설치, 시작 메뉴 바로 가기 추가 후 바로 실행
+- 관리자 권한 불필요
+- 같은 줄을 다시 실행하면 최신 버전으로 업데이트
+- 스크립트 내용: [`install.ps1`](install.ps1)
+- 또는 Releases의 `DeskPet-windows.zip`을 풀고 `DeskPet.exe` 실행. 서명 없는 앱이라 브라우저로 받은 경우 SmartScreen 경고 가능 (추가 정보 ▸ 실행)
+
+**macOS와 다른 점**
+
+- 메뉴는 작업 표시줄 알림 영역의 펫 아이콘
+- 일정 말풍선 미지원
 
 ## 사용법
 
@@ -188,6 +214,8 @@ pet_dir="$HOME/Library/Application Support/DeskPet"
 mkdir -p "$pet_dir" && echo "$input" | jq -c '{five_hour: .rate_limits.five_hour, seven_day: .rate_limits.seven_day}' > "$pet_dir/claude-usage.json.tmp" && mv -f "$pet_dir/claude-usage.json.tmp" "$pet_dir/claude-usage.json"
 ```
 
+Windows에서 Git Bash로 도는 상태줄이면 첫 줄만 `pet_dir="$APPDATA/DeskPet"`로 바꿈 (시험판, 실제 PC 확인 전).
+
 `$input`은 상태줄 스크립트가 받은 JSON 전체. 상태줄 설정 방법은 [Claude Code 문서](https://code.claude.com/docs/en/statusline.md) 참고.
 
 ## 아이디어 보내기
@@ -226,6 +254,18 @@ curl -fsSL https://raw.githubusercontent.com/TODOTODoTOdoTodotodo/petpet/main/in
 
 ```bash
 defaults delete com.deskpet.companion; rm -rf ~/Library/Logs/DeskPet ~/Library/Application\ Support/DeskPet
+```
+
+**Windows**
+
+```powershell
+$env:DESKPET_UNINSTALL = 1; irm https://github.com/TODOTODoTOdoTodotodo/petpet/releases/latest/download/install.ps1 | iex
+```
+
+- 프로그램 폴더와 바로 가기만 삭제. 설정·도감까지 지우려면 아래 줄 추가 실행
+
+```powershell
+Remove-Item -Recurse "$env:APPDATA\DeskPet", "$env:LOCALAPPDATA\DeskPet"
 ```
 
 ## 직접 빌드
