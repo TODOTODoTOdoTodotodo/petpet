@@ -65,7 +65,7 @@ final class SceneProbe {
     private func dress(_ elapsed: TimeInterval) -> Bool {
         guard let first = roster.residents.first ?? roster.pets.first else { return elapsed > 5 }
         pet = first
-        first.hat = HatKind.all.first
+        first.hat = HatCatalog.all.first
         first.heldItem = ItemCatalog.all.first
         results["pet"] = first.id
         return true
