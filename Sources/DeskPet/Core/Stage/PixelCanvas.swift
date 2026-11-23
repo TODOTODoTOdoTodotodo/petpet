@@ -57,7 +57,7 @@ struct PremultipliedImage {
 
 /// This object is responsible for software compositing on a premultiplied BGRA surface for platforms
 /// that draw sprites themselves (Windows layered windows): clearing regions, and drawing a sprite scaled
-/// with nearest-neighbor sampling (pixel art stays sharp), mirrored or flipped, with its top part hidden
+/// with nearest-neighbor sampling (pixel art stays sharp), mirrored or flipped, turned about its center, with its top part hidden
 /// and with extra transparency, blended over what is already there, plus invisible hit areas so a pet's whole
 /// grab box takes clicks. It also tracks what changed since
 /// the last upload so only that region needs to reach the screen.
@@ -105,6 +105,7 @@ final class PixelCanvas {
             for column in area.x..<area.maxX {
                 var sourceColumn = ((column - box.x) * 2 + 1) * image.width / (box.width * 2)
                 if mirrored { sourceColumn = image.width - 1 - sourceColumn }
+                // 디버그 빌드에서도 빠르게: 자주 도는 길이라 함수 호출 없이 바로 섞음
                 let source = (sourceRow * image.width + sourceColumn) * 4
                 let sourceAlpha = Self.scale(UInt32(image.bgra[source + 3]), opacity)
                 guard sourceAlpha > 0 else { continue }
@@ -119,6 +120,64 @@ final class PixelCanvas {
         }
         dirty = dirty.union(area)
         return area
+    }
+
+    /// 가운데(center, 픽셀)에 size로 늘려 rotation(라디안, 화면에서 반시계)만큼 돌려 그림 (최근접).
+    /// 맥 SpriteKit의 zRotation과 같은 방향. 돌지 않으면 box 그리기와 같음. 실제로 그린 영역을 돌려줌
+    @discardableResult
+    func draw(_ image: PremultipliedImage, center: CGPoint, size: CGSize, rotation: CGFloat,
+              mirrored: Bool = false, flipped: Bool = false, alpha: CGFloat = 1) -> PixelBox {
+        guard rotation != 0 else {
+            let box = PixelBox(x: Int((center.x - size.width / 2).rounded()), y: Int((center.y - size.height / 2).rounded()),
+                               width: Int(size.width.rounded()), height: Int(size.height.rounded()))
+            return draw(image, in: box, mirrored: mirrored, flipped: flipped, alpha: alpha)
+        }
+        guard size.width >= 1, size.height >= 1, image.width > 0, image.height > 0,
+              image.bgra.count >= image.width * image.height * 4 else { return .empty }
+        let opacity = UInt32((min(max(alpha, 0), 1) * 255).rounded())
+        guard opacity > 0 else { return .empty }
+        let c = cos(rotation), s = sin(rotation)
+        let halfX = (abs(size.width * c) + abs(size.height * s)) / 2, halfY = (abs(size.width * s) + abs(size.height * c)) / 2
+        let reach = PixelBox(x: Int((center.x - halfX).rounded(.down)) - 1, y: Int((center.y - halfY).rounded(.down)) - 1,
+                             width: Int((halfX * 2).rounded(.up)) + 3, height: Int((halfY * 2).rounded(.up)) + 3)
+        let area = reach.intersection(bounds)
+        guard !area.isEmpty else { return .empty }
+
+        var touched = PixelBox.empty
+        for row in area.y..<area.maxY {
+            var first: Int?, last = 0
+            for column in area.x..<area.maxX {
+                // 칸 가운데를 위로 +y 좌표로 바꿔 거꾸로 돌린 뒤, 그림 안 비율(u 왼→오, v 위→아래)로
+                let dx = CGFloat(column) + 0.5 - center.x, up = center.y - (CGFloat(row) + 0.5)
+                let localX = dx * c + up * s, localUp = -dx * s + up * c
+                var u = localX / size.width + 0.5, v = 0.5 - localUp / size.height
+                guard u >= 0, u < 1, v >= 0, v < 1 else { continue }
+                if mirrored { u = 1 - u }
+                if flipped { v = 1 - v }
+                let sourceColumn = min(Int(u * CGFloat(image.width)), image.width - 1)
+                let sourceRow = min(Int(v * CGFloat(image.height)), image.height - 1)
+                if blend(image.bgra, at: (sourceRow * image.width + sourceColumn) * 4, into: (row * width + column) * 4, opacity: opacity) {
+                    if first == nil { first = column }
+                    last = column
+                }
+            }
+            if let first { touched = touched.union(PixelBox(x: first, y: row, width: last - first + 1, height: 1)) }
+        }
+        dirty = dirty.union(touched)
+        return touched
+    }
+
+    /// 원본 픽셀 하나를 투명도를 곱해 겹침 (source-over). 그렸으면 true
+    private func blend(_ source: [UInt8], at index: Int, into target: Int, opacity: UInt32) -> Bool {
+        let sourceAlpha = Self.scale(UInt32(source[index + 3]), opacity)
+        guard sourceAlpha > 0 else { return false }
+        let keep = 255 - sourceAlpha
+        for channel in 0..<3 {
+            let color = Self.scale(UInt32(source[index + channel]), opacity)
+            bgra[target + channel] = UInt8(min(color + Self.scale(UInt32(bgra[target + channel]), keep), 255))
+        }
+        bgra[target + 3] = UInt8(min(sourceAlpha + Self.scale(UInt32(bgra[target + 3]), keep), 255))
+        return true
     }
 
     /// 클릭만 받는 칸의 알파 (레이어드 창은 알파 0 픽셀의 클릭을 뒤 창으로 넘김). 눈에는 안 보임

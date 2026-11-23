@@ -7,13 +7,16 @@ struct OverlaySprite {
     let box: PixelBox
     var mirrored = false
     var flipped = false
+    /// 아래쪽에서부터 보일 비율 (돌려 그릴 때는 쓰지 않음)
     var visibleShare: CGFloat = 1
     var alpha: CGFloat = 1
+    /// box 가운데를 축으로 돌릴 각도 (라디안, 화면에서 반시계)
+    var rotation: CGFloat = 0
 }
 
 /// This object is responsible for one monitor's transparent, always-on-top window (`WS_EX_LAYERED`):
 /// it keeps a premultiplied BGRA canvas, redraws only where sprites were and are, uploads just that changed
-/// region with `UpdateLayeredWindowIndirect`, and lets clicks through (`WS_EX_TRANSPARENT`) unless the
+/// region with `UpdateLayeredWindowIndirect` (sprites may be turned, like a somersault or a spinning weapon), and lets clicks through (`WS_EX_TRANSPARENT`) unless the
 /// pointer is over something a pet owner can grab; its mouse messages go to `onMouse`.
 final class LayeredOverlay {
     static let windowClass = "DeskPetOverlay"
@@ -107,8 +110,14 @@ final class LayeredOverlay {
     /// 지난 그림을 지우고 새로 그린 뒤, 바뀐 곳만 화면에 올림. hitAreas: 빈 픽셀도 클릭을 받을 자리 (펫 잡기 영역)
     func render(_ sprites: [OverlaySprite], hitAreas: [PixelBox] = []) {
         drawn.forEach(canvas.clear)
-        drawn = sprites.map {
-            canvas.draw($0.image, in: $0.box, mirrored: $0.mirrored, flipped: $0.flipped, visibleShare: $0.visibleShare, alpha: $0.alpha)
+        drawn = sprites.map { sprite in
+            guard sprite.rotation != 0 else {
+                return canvas.draw(sprite.image, in: sprite.box, mirrored: sprite.mirrored, flipped: sprite.flipped,
+                                   visibleShare: sprite.visibleShare, alpha: sprite.alpha)
+            }
+            let center = CGPoint(x: CGFloat(sprite.box.x) + CGFloat(sprite.box.width) / 2, y: CGFloat(sprite.box.y) + CGFloat(sprite.box.height) / 2)
+            return canvas.draw(sprite.image, center: center, size: CGSize(width: sprite.box.width, height: sprite.box.height),
+                               rotation: sprite.rotation, mirrored: sprite.mirrored, flipped: sprite.flipped, alpha: sprite.alpha)
         } + hitAreas.map(canvas.markHitArea)
         drawn.removeAll(where: \.isEmpty)
         upload()

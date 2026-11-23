@@ -111,15 +111,20 @@ final class TrayMenu {
     }
 }
 
-/// This object is responsible for the confirm dialogs a menu choice needs on Windows (message boxes).
-/// Text entry (naming a pet) needs a custom dialog and arrives in phase 3; until then naming is skipped.
+/// This object is responsible for the dialogs a menu choice needs on Windows: confirmations as message boxes,
+/// and short text entry (naming a pet) in a `TextPrompt` that keeps the pets moving while it is open.
 final class WindowsMenuDialogs: MenuDialogs {
+    private let host: HWND
+
+    init(host: HWND) {
+        self.host = host
+    }
+
     func confirm(title: String, message: String, confirm: String, cancel: String) -> Bool {
         MessageBoxW(nil, message.wide, title.wide, UINT(MB_OKCANCEL) | UINT(MB_ICONWARNING) | UINT(MB_TOPMOST)) == IDOK
     }
 
     func askText(title: String, message: String, initial: String, save: String, cancel: String) -> String? {
-        WindowsLogger.shared.log("🏷️ naming needs a text dialog (phase 3), skipped")
-        return nil
+        TextPrompt.ask(title: title, message: message, initial: initial, save: save, cancel: cancel, host: host)
     }
 }
