@@ -36,9 +36,7 @@ final class SmokeDriver {
         self.world = world
         steps = [
             findRider, slideWindow, wait(1.0), recordFollow,
-            aim, wait(0.25), drag,
-            wait(2.0), aim, wait(0.25), poke,
-            wait(0.8), aim, wait(0.25), openMenu, closeMenu,
+            drag, wait(2.0), poke, wait(0.8), openMenu, closeMenu,
         ]
     }
 
@@ -98,7 +96,7 @@ final class SmokeDriver {
         return false
     }
 
-    /// 0.1초마다 오른쪽 아래로 조금씩 옮김 (사람이 끄는 것처럼)
+    /// 0.1초마다 오른쪽 아래로 조금씩 옮김 (사람이 제목 줄을 끌면 그 창이 앞으로 오는 것처럼)
     private func slideWindow(_ elapsed: TimeInterval) -> Bool {
         guard let windowID, let window = HWND(bitPattern: UInt(windowID)) else { return true }
         guard now - lastMove >= 0.1 else { return false }
@@ -108,6 +106,8 @@ final class SmokeDriver {
             notes.append("GetWindowRect failed \(GetLastError())")
             return true
         }
+        // 처음에 맨 앞으로 올림. 뒤 창이면 내려가다 윗변이 앞 창에 가려져 펫이 정상적으로 떨어짐
+        if moved == 0 { raise(window) }
         let flags = UINT(SWP_NOSIZE) | UINT(SWP_NOZORDER) | UINT(SWP_NOACTIVATE)
         if !SetWindowPos(window, nil, rect.left + Self.windowStep.x, rect.top + Self.windowStep.y, 0, 0, flags) {
             notes.append("SetWindowPos failed \(GetLastError())")
@@ -115,6 +115,13 @@ final class SmokeDriver {
         }
         moved += 1
         return moved >= Self.windowSteps
+    }
+
+    /// 다른 프로세스 창은 HWND_TOP만으로는 앞으로 오지 않음(전경 잠금). 잠깐 최상위로 올렸다 내리면 일반 창 맨 앞에 남음
+    private func raise(_ window: HWND) {
+        let flags = UINT(SWP_NOMOVE) | UINT(SWP_NOSIZE) | UINT(SWP_NOACTIVATE)
+        _ = SetWindowPos(window, HWND(bitPattern: -1), 0, 0, 0, 0, flags)  // HWND_TOPMOST
+        _ = SetWindowPos(window, HWND(bitPattern: -2), 0, 0, 0, 0, flags)  // HWND_NOTOPMOST
     }
 
     private func recordFollow(_ elapsed: TimeInterval) -> Bool {
@@ -126,27 +133,28 @@ final class SmokeDriver {
         follow["petMoved"] = [rider.position.x - before.pet.x, rider.position.y - before.pet.y].map(Double.init)
         follow["stillOnWindow"] = rider.support?.owner.windowID == windowID
         follow["windowSteps"] = moved
+        follow["windowInFront"] = world().windows.first?.id == windowID
         return true
     }
 
-    /// 펫 잡기 영역 가운데로 커서를 옮김
-    @discardableResult
-    private func aim(_ elapsed: TimeInterval = 0) -> Bool {
+    /// 펫 잡기 영역 가운데로 커서를 옮김. 누르기는 다음 틱에: 그 사이 routeMouse가 이 자리를 보고 클릭 관통을 꺼야 함
+    /// (같은 틱에 누르면 지난 커서 자리 기준으로 관통이 켜져 있어, 움직이는 펫이면 클릭이 뒤 창으로 감)
+    private func aim() {
         guard let pet = target else {
             notes.append("no pet to aim at")
-            return true
+            return
         }
         let point = WindowsCoordinates.current().screenPoint(CGPoint(x: pet.grabRect.midX, y: pet.grabRect.midY))
         _ = SetCursorPos(point.x, point.y)
-        return true
     }
 
-    /// 누르고 10틱 동안 위로 끌어올린 뒤 놓음 (던지기)
+    /// 겨누고, 다음 틱에 누르고 10틱 동안 위로 끌어올린 뒤 놓음 (던지기)
     private func drag(_ elapsed: TimeInterval) -> Bool {
         if pressed == 0 {
             aim()
+        } else if pressed == 1 {
             send(MOUSEEVENTF_LEFTDOWN)
-        } else if pressed <= 10 {
+        } else if pressed <= 11 {
             var point = POINT()
             _ = GetCursorPos(&point)
             move(to: POINT(x: point.x - 4, y: point.y - 8))
@@ -159,22 +167,30 @@ final class SmokeDriver {
         return false
     }
 
+    /// 겨누고, 누르고, 놓음
     private func poke(_ elapsed: TimeInterval) -> Bool {
-        if pressed == 0 {
+        switch pressed {
+        case 0: aim()
+        case 1: send(MOUSEEVENTF_LEFTDOWN)
+        default:
+            send(MOUSEEVENTF_LEFTUP)
+            pressed = 0
+            return true
+        }
+        pressed += 1
+        return false
+    }
+
+    /// 겨누고, 다음 틱에 우클릭
+    private func openMenu(_ elapsed: TimeInterval) -> Bool {
+        guard pressed > 0 else {
             aim()
-            send(MOUSEEVENTF_LEFTDOWN)
             pressed = 1
             return false
         }
-        send(MOUSEEVENTF_LEFTUP)
-        pressed = 0
-        return true
-    }
-
-    private func openMenu(_ elapsed: TimeInterval) -> Bool {
-        aim()
         send(MOUSEEVENTF_RIGHTDOWN)
         send(MOUSEEVENTF_RIGHTUP)
+        pressed = 0
         return true
     }
 
