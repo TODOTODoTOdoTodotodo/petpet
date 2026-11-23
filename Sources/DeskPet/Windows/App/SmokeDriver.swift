@@ -98,7 +98,7 @@ final class SmokeDriver {
         return false
     }
 
-    /// 0.1초마다 오른쪽 아래로 조금씩 옮김 (사람이 끄는 것처럼)
+    /// 0.1초마다 오른쪽 아래로 조금씩 옮김 (사람이 제목 줄을 끌면 그 창이 앞으로 오는 것처럼)
     private func slideWindow(_ elapsed: TimeInterval) -> Bool {
         guard let windowID, let window = HWND(bitPattern: UInt(windowID)) else { return true }
         guard now - lastMove >= 0.1 else { return false }
@@ -108,7 +108,8 @@ final class SmokeDriver {
             notes.append("GetWindowRect failed \(GetLastError())")
             return true
         }
-        let flags = UINT(SWP_NOSIZE) | UINT(SWP_NOZORDER) | UINT(SWP_NOACTIVATE)
+        // 맨 앞으로 올리며 옮김 (HWND_TOP = nil). 뒤 창이면 내려가다 윗변이 앞 창에 가려져 펫이 정상적으로 떨어짐
+        let flags = UINT(SWP_NOSIZE) | UINT(SWP_NOACTIVATE)
         if !SetWindowPos(window, nil, rect.left + Self.windowStep.x, rect.top + Self.windowStep.y, 0, 0, flags) {
             notes.append("SetWindowPos failed \(GetLastError())")
             return true
