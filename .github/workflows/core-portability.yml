@@ -40,6 +40,10 @@ jobs:
           DESKPET_DATA_DIR: ${{ runner.temp }}\deskpet
         run: |
           $bin = (swift build --show-bin-path).Trim()
+          # Claude 사용량: 상태줄이 남기는 파일을 미리 둠 (5시간 85%, 한 시간 뒤 초기화 → 펫 기력 weary)
+          New-Item -ItemType Directory -Force $env:DESKPET_DATA_DIR | Out-Null
+          $resets = [DateTimeOffset]::UtcNow.AddHours(1).ToUnixTimeSeconds()
+          Set-Content "$env:DESKPET_DATA_DIR\claude-usage.json" "{`"five_hour`":{`"used_percentage`":85,`"resets_at`":$resets}}"
           Start-Process notepad
           Start-Sleep -Seconds 3
           $seconds = 22
@@ -103,6 +107,15 @@ jobs:
           if (-not $s.promptOpened) { throw "naming prompt did not open" }
           if (-not $s.renamed) { throw "pet was not renamed through the prompt" }
           if ($s.finishedSteps -ne $s.totalSteps) { throw "scene probe stopped at step $($s.finishedSteps)/$($s.totalSteps)" }
+          # 4단계: 키 누른 수(내용 없이), 마이크 확인(WASAPI), Claude 사용량, 펫 트레이 아이콘
+          $senses = $r.senses
+          Write-Host "senses: $($senses | ConvertTo-Json -Compress), usage: $($r.usage | ConvertTo-Json -Compress)"
+          if (-not $senses.listening) { throw "key-press counter not listening" }
+          if ($senses.keyPresses -lt $s.keysSent) { throw "key presses counted $($senses.keyPresses) of $($s.keysSent) sent" }
+          if ($senses.microphoneChecks -lt 1) { throw "microphone never checked" }
+          if ($r.usage.summary -ne '5h 85%') { throw "usage summary '$($r.usage.summary)'" }
+          if ($r.usage.vigor -ne 2) { throw "vigor $($r.usage.vigor), expected weary (2)" }
+          if (-not $r.trayPetIcon) { throw "tray icon is not the pet" }
           Write-Host "tray icon shown: $($r.tray), visible pet pixels: $visible, rode $($f.owner) by $($f.petMoved -join ','), gestures: $($d.gestures -join '; ')"
           Write-Host "bubbles painted: $($r.stage.bubblesPainted) (color pixels $($r.stage.bubbleColorPixels)), clicked $($s.item), renamed: $($s.renamed)"
       - name: Upload smoke report
@@ -114,6 +127,69 @@ jobs:
             smoke.json
             screen-*.png
             ${{ runner.temp }}\deskpet\Logs\pet_debug.log
+          if-no-files-found: ignore
+
+  # 포장 확인: 릴리스 zip을 만들고 install.ps1로 설치한 뒤, Swift가 없는 PATH로 설치본을 실행해 DLL이 다 들었는지 봄
+  windows-package:
+    name: Windows (package + install)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: compnerd/gha-setup-swift@v0.5.1
+        with:
+          swift-version: swift-${{ env.SWIFT_VERSION }}-release
+          swift-build: ${{ env.SWIFT_VERSION }}-RELEASE
+      - name: Package
+        shell: pwsh
+        run: scripts/package_windows.ps1
+      - name: Install, run without Swift, uninstall
+        shell: pwsh
+        timeout-minutes: 5
+        env:
+          DESKPET_DATA_DIR: ${{ runner.temp }}\deskpet-installed
+        run: |
+          $env:DESKPET_URL = (Resolve-Path dist\DeskPet-windows.zip).Path
+          $env:DESKPET_DIR = "$env:RUNNER_TEMP\DeskPetApp"
+          $env:DESKPET_NO_LAUNCH = '1'
+          & .\install.ps1
+          $exe = "$env:DESKPET_DIR\DeskPet.exe"
+          if (-not (Test-Path $exe)) { throw "not installed" }
+          $link = Join-Path ([Environment]::GetFolderPath('Programs')) 'DeskPet.lnk'
+          if (-not (Test-Path $link)) { throw "no Start menu shortcut" }
+          $skins = Get-ChildItem "$env:DESKPET_DIR\Assets\Skins" -Directory | ForEach-Object Name
+          $private = Get-Content scripts\private-skins.txt | Where-Object { $_ -and -not $_.StartsWith('#') }
+          if ($skins | Where-Object { $private -contains $_ }) { throw "private skin in the zip" }
+          # 창 없는 실행 파일인지 (PE 헤더의 Subsystem = 2, WINDOWS_GUI)
+          $bytes = [IO.File]::ReadAllBytes($exe)
+          $pe = [BitConverter]::ToInt32($bytes, 0x3C)
+          $subsystem = [BitConverter]::ToUInt16($bytes, $pe + 24 + 68)
+          if ($subsystem -ne 2) { throw "subsystem $subsystem, expected WINDOWS_GUI (2)" }
+          # Swift 런타임이 PATH에 없어도 뜨는지 (다른 폴더에서 실행해 실행 파일 옆 캐릭터를 찾는지도)
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot;$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+          $report = "$env:RUNNER_TEMP\installed-smoke.json"
+          $app = Start-Process -FilePath $exe -ArgumentList '--smoke', '6', '--report', $report -WorkingDirectory $env:RUNNER_TEMP -PassThru
+          if (-not $app.WaitForExit(60000)) { $app.Kill(); throw "installed app did not finish" }
+          if (-not (Test-Path $report)) { throw "installed app wrote no report (exit code $($app.ExitCode)), missing DLL?" }
+          $r = Get-Content $report -Raw | ConvertFrom-Json
+          if ($r.skins.Count -lt 10) { throw "installed app found $($r.skins.Count) skins at $($r.skinsDirectory)" }
+          if ($r.ticks -lt 100) { throw "installed app ticked $($r.ticks) times" }
+          if ($r.stage.bubbleFailures -gt 0) { throw "DirectWrite failed in the installed app" }
+          Write-Host "installed app: $($r.skins.Count) skins from $($r.skinsDirectory), $($r.ticks) ticks, tray $($r.tray), pet icon $($r.trayPetIcon)"
+          $env:DESKPET_UNINSTALL = '1'
+          & .\install.ps1
+          if (Test-Path $env:DESKPET_DIR) { throw "uninstall left $env:DESKPET_DIR" }
+          if (Test-Path $link) { throw "uninstall left the shortcut" }
+      - name: Upload package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: |
+            dist/DeskPet-windows.zip
+            ${{ runner.temp }}\installed-smoke.json
+            ${{ runner.temp }}\deskpet-installed\Logs\pet_debug.log
           if-no-files-found: ignore
 
   linux:

@@ -28,13 +28,16 @@ final class SkinLibrary<Frame> {
 
 /// This object is responsible for finding the Assets/Skins folder next to or inside the running app.
 enum SkinFolder {
-    /// 앱 번들 Resources → 실행 위치 순서로 Assets/Skins 탐색
+    /// 앱 번들 Resources → 실행 파일 옆(윈도우 zip 설치) → 실행 위치 순서로 Assets/Skins 탐색
     static func locate() -> URL {
         let fm = FileManager.default
         let current = URL(fileURLWithPath: fm.currentDirectoryPath)
         var candidates: [URL] = []
         if let resources = Bundle.main.resourceURL {
             candidates.append(resources.appendingPathComponent("Assets/Skins"))
+        }
+        if let executable = Bundle.main.executableURL {
+            candidates.append(executable.deletingLastPathComponent().appendingPathComponent("Assets/Skins"))
         }
         candidates += [
             current.appendingPathComponent("Assets/Skins"),

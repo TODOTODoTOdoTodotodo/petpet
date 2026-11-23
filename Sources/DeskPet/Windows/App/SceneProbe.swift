@@ -1,15 +1,17 @@
 import Foundation
 import WinSDK
 
-/// This object is responsible for the phase-3 part of the Windows smoke test (`--smoke N --scene`): it raises a pet to the
+/// This object is responsible for the scene part of the Windows smoke test (`--smoke N --scene`): it raises a pet to the
 /// naming level (in the runner's throwaway collection), dresses it (hat, held item, an emoji speech bubble, Lv.5 footstep
-/// sparkles), and once the pointer driver is done it has the pet throw a weapon that hits
-/// and one that misses, drops an item and clicks it with real input, and names the pet through the menu's text prompt,
-/// filling the prompt like a person would. What happened goes into the smoke report; what got drawn is the stage's.
-/// It only runs on the CI runner; a normal launch never creates it.
+/// sparkles) and presses a do-nothing key a few times for the key counter. Once the pointer driver is done it has the pet
+/// throw a weapon that hits and one that misses, drops an item and clicks it with real input, and names the pet through
+/// the menu's text prompt, filling the prompt like a person would. What happened goes into the smoke report; what got
+/// drawn is the stage's. It only runs on the CI runner; a normal launch never creates it.
 final class SceneProbe {
     /// 이름 짓기 시험에 넣는 이름 (한글이 입력 칸을 거쳐 그대로 오는지)
     static let typedName = "나비짱"
+    /// 키 수 세기 시험에서 누르는 횟수
+    static let keyPresses = 12
 
     private let roster: PetRoster
     private let treasury: Treasury
@@ -34,7 +36,7 @@ final class SceneProbe {
         self.world = world
         self.isReady = isReady
         self.perform = perform
-        steps = [dress, waitForDriver, throwWeapons, wait(1.5), dropItem, clickItem, wait(0.5), openNaming, fillPrompt, checkName]
+        steps = [dress, pressKeys, waitForDriver, throwWeapons, wait(1.5), dropItem, clickItem, wait(0.5), openNaming, fillPrompt, checkName]
     }
 
     var report: [String: Any] {
@@ -78,6 +80,24 @@ final class SceneProbe {
         first.hat = HatCatalog.all.first
         first.heldItem = ItemCatalog.all.first
         results["pet"] = first.id
+        return true
+    }
+
+    /// 아무 일도 하지 않는 F24 키를 실제 입력으로 12번 누름 (타이핑 반응의 키 수 세기 확인용)
+    private func pressKeys(_ elapsed: TimeInterval) -> Bool {
+        var inputs: [INPUT] = []
+        for _ in 0..<Self.keyPresses {
+            for up in [false, true] {
+                var input = INPUT()
+                input.type = DWORD(INPUT_KEYBOARD)
+                input.ki.wVk = WORD(VK_F24)
+                input.ki.dwFlags = up ? DWORD(KEYEVENTF_KEYUP) : 0
+                inputs.append(input)
+            }
+        }
+        let sent = SendInput(UINT(inputs.count), &inputs, Int32(MemoryLayout<INPUT>.size))
+        if sent != UINT(inputs.count) { notes.append("key SendInput sent \(sent)/\(inputs.count)") }
+        results["keysSent"] = Self.keyPresses
         return true
     }
 

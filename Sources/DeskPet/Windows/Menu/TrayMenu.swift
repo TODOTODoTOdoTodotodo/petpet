@@ -16,6 +16,8 @@ final class TrayMenu {
     private var openNotices: [UInt: MenuCommand] = [:]
     private var nextID: UINT = 0
     private(set) var isShown = false
+    /// 펫 그림 아이콘 (없으면 기본 앱 아이콘)
+    var icon: HICON?
 
     init(window: HWND) {
         self.window = window
@@ -27,8 +29,8 @@ final class TrayMenu {
         var data = baseData()
         data.uFlags = UINT(NIF_ICON | NIF_MESSAGE | NIF_TIP)
         data.uCallbackMessage = Self.callbackMessage
-        // 기본 앱 아이콘 (IDI_APPLICATION). 펫 아이콘은 포장 단계에서
-        data.hIcon = LoadIconW(nil, UnsafePointer<WCHAR>(bitPattern: 32512))
+        // 펫 그림 아이콘, 없으면 기본 앱 아이콘 (IDI_APPLICATION)
+        data.hIcon = icon ?? LoadIconW(nil, UnsafePointer<WCHAR>(bitPattern: 32512))
         let units = Array(tip.utf16.prefix(127)) + [0]
         withUnsafeMutableBytes(of: &data.szTip) { target in
             units.withUnsafeBytes { source in target.copyMemory(from: source) }
