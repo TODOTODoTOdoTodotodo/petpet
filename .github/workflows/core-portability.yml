@@ -42,8 +42,9 @@ jobs:
           $bin = (swift build --show-bin-path).Trim()
           Start-Process notepad
           Start-Sleep -Seconds 3
-          $app = Start-Process -FilePath "$bin\DeskPet.exe" -ArgumentList '--smoke', '8', '--report', 'smoke.json' -PassThru -NoNewWindow
-          # 펫이 내려앉은 뒤 화면 캡처 (DWM이 합성한 화면이라 레이어드 창도 찍힘).
+          $app = Start-Process -FilePath "$bin\DeskPet.exe" -ArgumentList '--smoke', '14', '--drive', '--report', 'smoke.json' -PassThru -NoNewWindow
+          # --drive: 펫이 올라탄 창을 앱이 조금씩 옮기고, 실제 입력(SendInput)으로 펫을 끌어 던지고·찌르고·우클릭 메뉴를 열었다 닫음
+          # 창을 옮긴 뒤 화면 캡처 (DWM이 합성한 화면이라 레이어드 창도 찍힘).
           # 캡처가 안 돼도 판정은 보고서의 픽셀 수로 함
           Start-Sleep -Seconds 5
           try {
@@ -62,12 +63,28 @@ jobs:
           if (-not ($r.windows | Where-Object { $_.owner -like '*notepad*' })) { throw "notepad window not listed" }
           if ($r.pets.Count -lt 1) { throw "no pets" }
           if ($r.drawings -lt 1) { throw "no drawings composed" }
-          # 8초 동안 60Hz면 약 480틱. 2코어 러너에서 디버그 빌드가 그리는 동안 캡처까지 돌면 350~410틱.
-          # 타이머가 예전처럼 31ms로 늘어나면(약 290틱) 걸리게 300을 바닥으로 둠
-          if ($r.ticks -lt 300) { throw "too few ticks: $($r.ticks) in 8s" }
+          # 60Hz면 초당 60틱. 2코어 러너에서 디버그 빌드가 그리는 동안 캡처까지 돌면 초당 43~51틱(2c 측정).
+          # 타이머가 예전처럼 31ms로 늘어나면(초당 약 32틱) 걸리게 초당 35틱을 바닥으로 둠
+          if ($r.ticks -lt 35 * 14) { throw "too few ticks: $($r.ticks) in 14s" }
           $visible = ($r.overlays | Measure-Object -Property visiblePixels -Sum).Sum
           if ($visible -lt 100) { throw "overlays show almost nothing: $visible pixels" }
-          Write-Host "tray icon shown: $($r.tray), visible pet pixels: $visible"
+          # 창 따라가기: 펫이 창과 같은 만큼 움직이고 여전히 그 창 위에 있음
+          $d = $r.drive
+          Write-Host "drive notes: $($d.notes -join '; ')"
+          $f = $d.follow
+          if ($f.error) { throw "follow: $($f.error)" }
+          if ($f.windowMoved[0] -lt 50) { throw "window did not move: $($f.windowMoved -join ',')" }
+          foreach ($i in 0, 1) {
+            if ([math]::Abs($f.petMoved[$i] - $f.windowMoved[$i]) -gt 2) { throw "pet did not ride along: pet $($f.petMoved -join ',') window $($f.windowMoved -join ',')" }
+          }
+          if (-not $f.stillOnWindow) { throw "pet fell off the moved window" }
+          # 펫 누르기: 끌어 던지기·찌르기·우클릭 메뉴
+          foreach ($event in 'picked up', 'released', 'poked') {
+            if (-not ($d.gestures | Where-Object { $_ -like "*$event*" })) { throw "no '$event' gesture: $($d.gestures -join '; ')" }
+          }
+          if ($d.petMenuRows -lt 3) { throw "pet menu did not open (rows: $($d.petMenuRows))" }
+          if ($d.finishedSteps -ne $d.totalSteps) { throw "driver stopped at step $($d.finishedSteps)/$($d.totalSteps)" }
+          Write-Host "tray icon shown: $($r.tray), visible pet pixels: $visible, rode $($f.owner) by $($f.petMoved -join ','), gestures: $($d.gestures -join '; ')"
       - name: Upload smoke report
         if: always()
         uses: actions/upload-artifact@v4

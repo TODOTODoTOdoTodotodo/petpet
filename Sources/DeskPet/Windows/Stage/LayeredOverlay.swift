@@ -11,12 +11,15 @@ struct OverlaySprite {
     var alpha: CGFloat = 1
 }
 
-/// This object is responsible for one monitor's transparent, always-on-top, click-through window
-/// (`WS_EX_LAYERED`): it keeps a premultiplied BGRA canvas, redraws only where sprites were and are,
-/// and uploads just that changed region to the screen with `UpdateLayeredWindowIndirect`.
+/// This object is responsible for one monitor's transparent, always-on-top window (`WS_EX_LAYERED`):
+/// it keeps a premultiplied BGRA canvas, redraws only where sprites were and are, uploads just that changed
+/// region with `UpdateLayeredWindowIndirect`, and lets clicks through (`WS_EX_TRANSPARENT`) unless the
+/// pointer is over something a pet owner can grab; its mouse messages go to `onMouse`.
 final class LayeredOverlay {
     static let windowClass = "DeskPetOverlay"
     private static var isRegistered = false
+    /// 오버레이가 받은 마우스 메시지 (처리하면 결과를 돌려줌). C 창 프로시저는 문맥을 잡을 수 없어 정적 자리에 둠
+    static var onMouse: ((HWND, UINT) -> LRESULT?)?
 
     /// 이 모니터 왼쪽 위의 가상 화면 픽셀 좌표
     let origin: POINT
@@ -27,6 +30,16 @@ final class LayeredOverlay {
     private let bits: UnsafeMutableRawPointer
     /// 지난번에 그린 자리 (이번에 지울 곳)
     private var drawn: [PixelBox] = []
+    private var exStyle: DWORD
+    /// 클릭을 받는지 (끄면 모든 클릭이 뒤 창으로 감)
+    var catchesMouse = false {
+        didSet {
+            guard catchesMouse != oldValue else { return }
+            let transparent = DWORD(truncatingIfNeeded: WS_EX_TRANSPARENT)
+            exStyle = catchesMouse ? exStyle & ~transparent : exStyle | transparent
+            _ = SetWindowLongPtrW(window, GWL_EXSTYLE, LONG_PTR(exStyle))
+        }
+    }
 
     /// box: 모니터의 가상 화면 픽셀 사각형
     init?(box: PixelBox, instance: HINSTANCE?) {
@@ -34,7 +47,7 @@ final class LayeredOverlay {
         origin = POINT(x: LONG(box.x), y: LONG(box.y))
         canvas = PixelCanvas(width: box.width, height: box.height)
 
-        // 펫 위를 누를 수 있게 하는 일(관통 끄기)은 2d에서
+        // 처음에는 클릭 관통. 펫 위에 포인터가 오면 catchesMouse로 끔
         let exStyle = DWORD(truncatingIfNeeded: WS_EX_LAYERED) | DWORD(truncatingIfNeeded: WS_EX_TOOLWINDOW)
             | DWORD(truncatingIfNeeded: WS_EX_TOPMOST) | DWORD(truncatingIfNeeded: WS_EX_NOACTIVATE)
             | DWORD(truncatingIfNeeded: WS_EX_TRANSPARENT)
@@ -59,6 +72,7 @@ final class LayeredOverlay {
             return nil
         }
         _ = SelectObject(memoryDC, UnsafeMutableRawPointer(bitmap))
+        self.exStyle = exStyle
         self.window = window
         self.memoryDC = memoryDC
         self.bitmap = bitmap
@@ -76,8 +90,13 @@ final class LayeredOverlay {
         let atom = name.withUnsafeBufferPointer { pointer -> ATOM in
             var windowClass = WNDCLASSEXW()
             windowClass.cbSize = UINT(MemoryLayout<WNDCLASSEXW>.size)
-            windowClass.lpfnWndProc = { window, message, wParam, lParam in DefWindowProcW(window, message, wParam, lParam) }
+            windowClass.lpfnWndProc = { window, message, wParam, lParam in
+                if let window, let result = LayeredOverlay.onMouse?(window, message) { return result }
+                return DefWindowProcW(window, message, wParam, lParam)
+            }
             windowClass.hInstance = instance
+            // 기본 화살표 (IDC_ARROW). 없으면 펫 위에서 커서가 그 전 모양으로 남음
+            windowClass.hCursor = LoadCursorW(nil, UnsafePointer<WCHAR>(bitPattern: 32512))
             windowClass.lpszClassName = pointer.baseAddress
             return RegisterClassExW(&windowClass)
         }
@@ -85,12 +104,13 @@ final class LayeredOverlay {
         return isRegistered
     }
 
-    /// 지난 그림을 지우고 새로 그린 뒤, 바뀐 곳만 화면에 올림
-    func render(_ sprites: [OverlaySprite]) {
+    /// 지난 그림을 지우고 새로 그린 뒤, 바뀐 곳만 화면에 올림. hitAreas: 빈 픽셀도 클릭을 받을 자리 (펫 잡기 영역)
+    func render(_ sprites: [OverlaySprite], hitAreas: [PixelBox] = []) {
         drawn.forEach(canvas.clear)
         drawn = sprites.map {
             canvas.draw($0.image, in: $0.box, mirrored: $0.mirrored, flipped: $0.flipped, visibleShare: $0.visibleShare, alpha: $0.alpha)
-        }.filter { !$0.isEmpty }
+        } + hitAreas.map(canvas.markHitArea)
+        drawn.removeAll(where: \.isEmpty)
         upload()
     }
 

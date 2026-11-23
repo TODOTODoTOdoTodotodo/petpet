@@ -2,7 +2,7 @@ import Foundation
 
 /// This object is responsible for checking the shared software compositor the Windows stage draws with:
 /// nearest-neighbor scaling, mirroring and flipping, hiding the top part, transparency, blending,
-/// clipping at the edges, and the changed-region bookkeeping that limits screen uploads.
+/// clipping at the edges, invisible hit areas, and the changed-region bookkeeping that limits screen uploads.
 enum CanvasChecks {
     static func run(_ check: Checker) {
         check.section("픽셀 합성 (공통)")
@@ -46,6 +46,15 @@ enum CanvasChecks {
         check.expect(pixel(edge, 2, 0) == clear && edge.visiblePixelCount == 0 && edge.dirty == edge.bounds, "지우기도 바뀐 영역")
         check.expect(PixelBox(x: 0, y: 0, width: 2, height: 2).union(PixelBox(x: 3, y: 1, width: 1, height: 3))
                      == PixelBox(x: 0, y: 0, width: 4, height: 4), "영역 합치기")
+
+        let hit = PixelCanvas(width: 3, height: 1)
+        hit.draw(PremultipliedImage(width: 1, height: 1, bgra: blue), in: PixelBox(x: 0, y: 0, width: 1, height: 1))
+        _ = hit.takeDirty()
+        let marked = hit.markHitArea(PixelBox(x: 0, y: 0, width: 2, height: 5))
+        check.expect(pixel(hit, 0, 0) == blue && pixel(hit, 1, 0) == [0, 0, 0, PixelCanvas.hitAlpha] && pixel(hit, 2, 0) == clear,
+                     "클릭 칸은 빈 픽셀만 알파 1로 채움 (그린 픽셀은 그대로)")
+        check.expect(marked == PixelBox(x: 0, y: 0, width: 2, height: 1) && hit.takeDirty() == marked && hit.visiblePixelCount == 1,
+                     "클릭 칸도 바뀐 영역, 보이는 픽셀 수에서는 뺌", "\(marked)")
 
         let decoded = PremultipliedImage(pixels: SpritePixels(width: 1, height: 1, rgba: [255, 128, 0, 128]))
         check.expect(decoded.bgra == [0, 64, 128, 128], "RGBA(곧은 알파) → 미리 곱한 BGRA", "\(decoded.bgra)")

@@ -7,6 +7,8 @@ import WinSDK
 final class TrayMenu {
     /// 트레이 아이콘이 창에 보내는 메시지
     static let callbackMessage = UINT(WM_APP) + 1
+    /// 메뉴가 열린 동안 진행 틱을 보내는 타이머 (메뉴가 메시지 루프를 잡고 있어 고해상도 타이머가 돌지 못함)
+    static let menuTimerID: UINT_PTR = 7
     private static let iconID: UINT = 1
 
     private let window: HWND
@@ -52,7 +54,7 @@ final class TrayMenu {
 
     // MARK: - Popup menus
 
-    /// 포인터 자리에 메뉴를 띄움. 고른 항목은 WM_COMMAND로 창에 옴
+    /// 포인터 자리에 메뉴를 띄움 (닫힐 때까지 돌아오지 않음). 고른 항목은 WM_COMMAND로 창에 옴
     func popUp(_ nodes: [MenuNode]) {
         commands = [:]
         openNotices = [:]
@@ -62,7 +64,10 @@ final class TrayMenu {
         _ = GetCursorPos(&point)
         // 창을 앞으로 가져와야 메뉴 밖을 눌렀을 때 메뉴가 닫힘
         _ = SetForegroundWindow(window)
+        // 메뉴가 열린 동안에도 펫이 움직이게 (WM_TIMER, 약 30Hz)
+        _ = SetTimer(window, Self.menuTimerID, 16, nil)
         _ = TrackPopupMenu(menu, UINT(TPM_RIGHTBUTTON), point.x, point.y, 0, window, nil)
+        _ = KillTimer(window, Self.menuTimerID)
         _ = PostMessageW(window, UINT(WM_NULL), 0, 0)
         _ = DestroyMenu(menu)
     }
