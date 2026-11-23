@@ -84,7 +84,7 @@ jobs:
           if ($f.error) { throw "follow: $($f.error)" }
           if ($f.windowMoved[0] -lt 50) { throw "window did not move: $($f.windowMoved -join ',')" }
           foreach ($i in 0, 1) {
-            if ([math]::Abs($f.petMoved[$i] - $f.windowMoved[$i]) -gt 2) { throw "pet did not ride along: pet $($f.petMoved -join ',') window $($f.windowMoved -join ',')" }
+            if ([math]::Abs($f.petMoved[$i] - $f.windowMoved[$i]) -gt 2) { throw "pet did not ride along: pet $($f.petMoved -join ',') window $($f.windowMoved -join ',') (pet was $($f.riderBehavior))" }
           }
           if (-not $f.stillOnWindow) { throw "pet fell off the moved window" }
           # 펫 누르기: 끌어 던지기·찌르기·우클릭 메뉴
