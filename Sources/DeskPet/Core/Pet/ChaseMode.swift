@@ -86,7 +86,9 @@ final class PointerChase: ChaseMode {
         if let ceiling = world.underside(above: cursor), ceiling.y - cursor.y <= clingReach, let id = ceiling.owner.windowID {
             return .underside(id)
         }
-        return world.ledge(under: cursor)?.owner.windowID.map(Spot.top)
+        // 열거형 케이스를 함수로 넘기면(.map(Spot.top)) 윈도우 Swift 6.3.3 릴리스 최적화가 멈춰서 풀어 씀
+        guard let id = world.ledge(under: cursor)?.owner.windowID else { return nil }
+        return .top(id)
     }
 }
 

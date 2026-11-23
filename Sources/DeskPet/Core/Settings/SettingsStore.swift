@@ -78,10 +78,10 @@ final class JSONFileSettingsStore: SettingsStore {
         return nil
     }
 
-    func set(string value: String?, forKey key: String) { put(value.map(Value.string), key) }
-    func set(number value: Double?, forKey key: String) { put(value.map(Value.number), key) }
-    func set(flag value: Bool?, forKey key: String) { put(value.map(Value.flag), key) }
-    func set(strings value: [String]?, forKey key: String) { put(value.map(Value.strings), key) }
+    func set(string value: String?, forKey key: String) { put(value.map { .string($0) }, key) }
+    func set(number value: Double?, forKey key: String) { put(value.map { .number($0) }, key) }
+    func set(flag value: Bool?, forKey key: String) { put(value.map { .flag($0) }, key) }
+    func set(strings value: [String]?, forKey key: String) { put(value.map { .strings($0) }, key) }
 
     private func put(_ value: Value?, _ key: String) {
         guard values[key] != value else { return }

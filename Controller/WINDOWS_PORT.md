@@ -80,7 +80,7 @@
 | 1 ✅ | 윈도우에서 `swift build`(Core만) + 검사 실행 (GitHub Actions 윈도우 러너). 스킨은 WIC 대신 공통 `PNGDecoder`로 읽음 | 같은 검사 통과 | 완료 (9절) |
 | 2 | 창 목록·모니터·오버레이·프레임 그리기·트레이 메뉴·클릭·드래그 (10절) | 펫이 창 위를 걷고, 창을 옮기면 따라감 | 2~3주 |
 | 3 ✅ | 말풍선·모자·소품·무기·물건·스킬 효과·이름 입력 창 (잠들기·포인터 쫓기·장난은 2b의 Core·`WindowsHostSenses`로 이미 동작) | CI 연기 시험 장면 확인 + 화면 캡처 | 완료 (10.10절) |
-| 4 | 타이핑 반응·통화 중·Claude 사용량, zip + PowerShell 한 줄 설치 (10.5절) | 설치 후 새 PC에서 실행 | 1주 |
+| 4 ✅ | 타이핑 반응·통화 중·Claude 사용량·펫 트레이 아이콘, zip + PowerShell 한 줄 설치 (10.5절) | CI에서 설치본을 Swift 없는 PATH로 실행 | 완료 (10.11절), 실제 릴리스는 사용자 확인 뒤 |
 | 보류 | 일정 말풍선 (윈도우 캘린더 출처 결정 후) | - | - |
 
 ## 7. 위험과 정할 것
@@ -321,3 +321,40 @@
 - **아직 없는 것:**
   - 실제 PC에서 눈으로 맥과 나란히 비교하기(배율 125·150%의 말풍선 글자 선명도, 여러 모니터).
   - 4단계: 타이핑 반응(Raw Input), 통화 중(WASAPI), Claude 사용량, 펫 트레이 아이콘, `/SUBSYSTEM:WINDOWS`, zip + PowerShell 한 줄 설치.
+
+### 10.11 4단계 결과 (2026-11-23)
+- **타이핑 반응 (`Windows/Input/RawKeyCounter.swift`):**
+  - 윈도우에는 맥의 세션 키 누름 카운터 같은 것이 없다. 그래서 숨은 앱 창이 Raw Input(`RIDEV_INPUTSINK`)으로 키보드 이벤트를 받는다. 읽는 것은 누름·뗌 표시뿐이고, 어떤 키인지·무엇을 쳤는지는 보지 않는다.
+  - 메뉴의 "타이핑 반응"이 켜져 있을 때만 등록하고, 끄면 등록을 푼다(`RIDEV_REMOVE`). 기본값은 맥과 같이 켜짐이다.
+  - 전역 키 입력을 받는 방식이라 보안 프로그램이 의심할 수 있다(7절). 실제 PC에서 경고가 뜨면 윈도우만 기본 꺼짐으로 바꾼다.
+- **통화 중 조용히 (`Sources/DeskPetAudio`, C++ 타깃):**
+  - WASAPI 헤더도 C++ 전용이라 C 함수 하나(`dp_microphone_in_use`)로 감쌌다.
+  - 활성 녹음 장치마다 활성 오디오 세션이 있는지만 본다. 스트림을 열지 않고 소리도 읽지 않아 마이크 권한이 필요 없다. 맥(장치가 어디선가 쓰이는지)과 같은 뜻이다.
+  - 확인 주기는 Core가 정한다(1초, 설정이 켜져 있을 때만).
+- **Claude 사용량 (`Windows/App/ClaudeUsagePoller.swift`):**
+  - 상태줄이 남기는 `%APPDATA%\DeskPet\claude-usage.json`을 30초마다 앱 틱에서 읽는다. 형식과 셈(기력·메뉴 요약)은 맥과 같다. 자격 증명·네트워크는 쓰지 않는다.
+  - 상태줄 설정 방법은 README에 아직 넣지 않았다(릴리스 때 함께). Git Bash에서 도는 상태줄이면 README의 맥 줄에서 `pet_dir="$APPDATA/DeskPet"`로만 바꾸면 될 것으로 본다(추정, 실제 PC에서 확인).
+- **펫 트레이 아이콘 (`Windows/Menu/TrayIcon.swift`):** 첫 펫이 서 있는 그림을 그린 픽셀만 잘라 정사각형에 놓고, 최근접으로 작은 아이콘 크기에 맞춘다. 실행 파일 자체의 아이콘(탐색기·작업 표시줄)은 리소스 컴파일이 필요해 아직 기본 아이콘이다.
+- **캐릭터 찾기:** `SkinFolder`가 실행 파일 옆 `Assets\Skins`도 찾는다. 바로 가기나 다른 폴더에서 실행해도 된다.
+- **포장 (`scripts/package_windows.ps1`):**
+  - `swift build -c release -Xlinker /SUBSYSTEM:WINDOWS -Xlinker /ENTRY:mainCRTStartup`로 콘솔 창 없는 실행 파일을 만든다.
+  - `dumpbin /dependents`로 가져오기 표를 따라가며 Swift 런타임 폴더와 VC 재배포 폴더에서 찾은 DLL만 넣는다. VC 런타임(`VCRUNTIME140`, `MSVCP140`)도 앱 옆에 둔다(재배포 허용, VC++ 재배포 패키지가 없는 PC 대비).
+  - `scripts/private-skins.txt`의 캐릭터는 넣지 않는다.
+  - 결과(CI run 45117528482): `DeskPet-windows.zip` 24.2MB, DLL 16개(Swift 런타임 13개 + VC 런타임 3개), 공개 캐릭터 19종.
+- **설치 (`install.ps1`, 저장소 맨 위):**
+  - `irm https://github.com/TODOTODoTOdoTodotodo/petpet/releases/latest/download/install.ps1 | iex`
+  - `%LOCALAPPDATA%\Programs\DeskPet`에 풀고 시작 메뉴 바로 가기를 만든 뒤 실행한다. 관리자 권한을 쓰지 않는다. `DESKPET_AUTOSTART=1`이면 로그인할 때도 실행한다.
+  - 지우기는 `$env:DESKPET_UNINSTALL = 1` 뒤 같은 줄, 또는 받은 파일로 `.\install.ps1 -Uninstall`. 설정·도감·기록은 남기고 지우는 명령을 알려 준다.
+  - 설치 폴더는 DeskPet이 들어 있거나 비어 있을 때만 지운다(`DESKPET_DIR`을 잘못 적어도 안전).
+  - 파일은 ASCII만 쓴다. Windows PowerShell 5.1은 BOM 없는 파일을 시스템 코드 페이지(한국어면 CP949)로 읽어, 한글이 뒤 글자를 삼켜 구문이 깨질 수 있다.
+- **릴리스 워크플로 (`.github/workflows/release-windows.yml`):**
+  - 태그(`v*`)를 push하면 zip을 만들고, Swift 없는 PATH로 한 번 띄워 본 뒤 그 태그의 릴리스에 `DeskPet-windows.zip`과 `install.ps1`을 올린다. 릴리스가 없으면 초안으로 만든다. 이미 있는 태그는 Actions에서 직접 실행한다.
+  - 아직 실행한 적 없다(태그·릴리스는 사용자 확인 뒤).
+- **CI (`Core portability`):**
+  - 연기 시험이 F24 키 12번을 실제 입력으로 눌러 12번 세는지, 마이크 확인이 도는지, 미리 둔 사용량 85% 파일이 "5h 85%"와 지친 기력(weary)이 되는지, 트레이 아이콘이 펫 그림인지 확인한다. 러너에는 녹음 장치가 없어(0개) 마이크 결과는 "아님"만 확인됐다.
+  - 새 잡 `Windows (package + install)`: zip을 만들어 `install.ps1`로 설치하고, 실행 파일이 창 없는 앱(PE Subsystem 2)인지, 비공개 캐릭터가 없는지 본다. 그리고 Swift가 없는 PATH로 다른 폴더에서 실행해 보고서를 받은 뒤(19종, 353틱, 펫 아이콘), 지우기까지 확인한다.
+- **윈도우 릴리스 빌드에서 고친 것:** CI의 Swift 6.3.3은 검증용(+Asserts) 도구 모음이다. 릴리스 최적화(SILCombine)가 열거형 케이스를 함수로 넘기는 코드(`.map(Spot.top)`)에서 멈췄다. `ChaseMode`·`SettingsStore`의 해당 줄을 풀어 썼고, 동작은 같다(맥 검사 785개 통과).
+- **아직 없는 것:**
+  - 실제 릴리스: 태그를 만들거나 `release-windows.yml`을 실행하면 올라간다. 그 전까지 `install.ps1` 한 줄은 404다. README의 윈도우 설치·상태줄 안내도 그때 넣는다.
+  - 실제 PC 확인: SmartScreen·백신 반응(서명 없음, Raw Input), 배율 125·150%, 여러 모니터, 실제 마이크로 통화 중 조용히.
+  - 실행 파일 아이콘(리소스), 일정 말풍선(보류).

@@ -34,7 +34,7 @@ let package = Package(
     ]
 )
 #elseif os(Windows)
-// 윈도우판: 공통 코드 + Win32 껍데기 (2단계 진행 중, Controller/WINDOWS_PORT.md)
+// 윈도우판: 공통 코드 + Win32 껍데기 + C++로 감싼 DirectWrite·WASAPI (Controller/WINDOWS_PORT.md)
 let package = Package(
     name: "DeskPet",
     products: [
@@ -46,7 +46,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "DeskPet",
-            dependencies: ["DeskPetText"],
+            dependencies: ["DeskPetText", "DeskPetAudio"],
             path: "Sources/DeskPet",
             sources: ["Core", "Windows"]
         ),
@@ -58,6 +58,14 @@ let package = Package(
                 .linkedLibrary("d2d1"),
                 .linkedLibrary("dwrite"),
                 .linkedLibrary("windowscodecs"),
+                .linkedLibrary("ole32")
+            ]
+        ),
+        // 통화 중 확인 (WASAPI 헤더도 C++ 전용이라 C 함수로 감쌈)
+        .target(
+            name: "DeskPetAudio",
+            path: "Sources/DeskPetAudio",
+            linkerSettings: [
                 .linkedLibrary("ole32")
             ]
         )

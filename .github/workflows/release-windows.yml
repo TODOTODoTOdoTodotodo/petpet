@@ -1,0 +1,64 @@
+# 윈도우판 릴리스: 태그(v*)를 push하면 윈도우 러너가 DeskPet-windows.zip을 만들어 그 태그의 릴리스에 install.ps1과 함께 올림
+# 릴리스가 아직 없으면 초안(draft)으로 만들어 사람이 확인한 뒤 공개함. 맥 DMG·zip은 지금처럼 맥에서 만들어 같은 릴리스에 올림
+# 이미 있는 태그에 다시 올리려면 Actions에서 직접 실행(workflow_dispatch)하고 태그를 적음
+name: Release (Windows)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "올릴 릴리스 태그 (예: v1.1)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  SWIFT_VERSION: "6.3.3"
+
+jobs:
+  windows:
+    name: Windows zip
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: compnerd/gha-setup-swift@v0.5.1
+        with:
+          swift-version: swift-${{ env.SWIFT_VERSION }}-release
+          swift-build: ${{ env.SWIFT_VERSION }}-RELEASE
+      - name: Package
+        shell: pwsh
+        run: scripts/package_windows.ps1
+      # 올리기 전에 Swift 없는 PATH로 한 번 띄워 DLL이 다 들었는지 확인
+      - name: Check the package runs without Swift
+        shell: pwsh
+        timeout-minutes: 5
+        env:
+          DESKPET_DATA_DIR: ${{ runner.temp }}\deskpet-check
+        run: |
+          Expand-Archive dist\DeskPet-windows.zip "$env:RUNNER_TEMP\unpacked"
+          $exe = "$env:RUNNER_TEMP\unpacked\DeskPet\DeskPet.exe"
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
+          $report = "$env:RUNNER_TEMP\check.json"
+          $app = Start-Process -FilePath $exe -ArgumentList '--smoke', '5', '--report', $report -WorkingDirectory $env:RUNNER_TEMP -PassThru
+          if (-not $app.WaitForExit(60000)) { $app.Kill(); throw "packaged app did not finish" }
+          if (-not (Test-Path $report)) { throw "packaged app wrote no report (exit code $($app.ExitCode))" }
+          $r = Get-Content $report -Raw | ConvertFrom-Json
+          if ($r.skins.Count -lt 10) { throw "packaged app found $($r.skins.Count) skins" }
+      - name: Upload to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:TAG --draft --title $env:TAG --notes "Windows: irm https://github.com/${{ github.repository }}/releases/latest/download/install.ps1 | iex"
+          }
+          gh release upload $env:TAG dist\DeskPet-windows.zip install.ps1 --clobber

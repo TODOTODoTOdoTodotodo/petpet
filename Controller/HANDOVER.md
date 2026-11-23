@@ -141,28 +141,33 @@ private/
 │           ├── SkillTrailNode.swift   # 스킬 도약 입자 (흙먼지, 불꽃, 칼바람)
 │           ├── DotArt.swift           # 텍스트 도트 → 텍스처·메뉴 아이콘
 │           └── StageDirector.swift    # 모니터 구성에 맞춰 무대 관리, 공통 그리기 목록을 무대에 넘김 (PetStage)
-│   └── Windows/                   # 윈도우 껍데기 (Win32, 3단계 완료·4단계 전). 맥 밖에서만 컴파일
+│   └── Windows/                   # 윈도우 껍데기 (Win32, 4단계 완료·릴리스 전). 맥 밖에서만 컴파일
 │       ├── main.swift                 # DPI 인식, 숨은 최상위 창, 틱·메시지를 함께 기다리는 루프
 │       ├── App/
 │       │   ├── WindowsApp.swift       # 공통 조각 연결, 60Hz 진행, 트레이·펫 메뉴 명령, 껍데기 쪽 설정, --smoke 보고서
 │       │   ├── SmokeDriver.swift      # --smoke --drive: 펫이 탄 창 옮기기, SendInput으로 끌기·찌르기·우클릭 메뉴 (CI 전용)
 │       │   ├── SceneProbe.swift       # --smoke --scene: 모자·소품·말풍선, 무기 던지기, 물건 클릭, 입력 창으로 이름 짓기 (CI 전용)
 │       │   ├── FrameTimer.swift       # 고해상도 대기 타이머 (SetTimer는 31ms로 늘어남)
-│       │   ├── WindowsHostSenses.swift # GetCursorPos·GetLastInputInfo·SetCursorPos (키 수·마이크는 4단계)
+│       │   ├── WindowsHostSenses.swift # GetCursorPos·GetLastInputInfo·SetCursorPos, 키 수(RawKeyCounter)·마이크(DeskPetAudio)
+│       │   ├── ClaudeUsagePoller.swift # %APPDATA%\DeskPet\claude-usage.json을 30초마다 읽음 (자격 증명·네트워크 없음)
 │       │   └── WindowsStorage.swift   # %APPDATA%\DeskPet(설정·도감), %LOCALAPPDATA%\DeskPet\Logs, DESKPET_DATA_DIR
 │       ├── World/
 │       │   ├── WindowsDesktop.swift   # EnumDisplayMonitors(작업 영역)·EnumWindows + DWM 프레임·맨 앞 앱
 │       │   └── WindowsCoordinates.swift # 가상 화면(왼쪽 위, 아래 +y) ↔ 공통 좌표(왼쪽 아래, 위 +y)
-│       ├── Input/OverlayPointerInput.swift # 오버레이 마우스 메시지 → PetPointerGesture (캡처, 포커스 안 뺏음)
+│       ├── Input/
+│       │   ├── OverlayPointerInput.swift # 오버레이 마우스 메시지 → PetPointerGesture (캡처, 포커스 안 뺏음)
+│       │   └── RawKeyCounter.swift    # Raw Input으로 키 누른 수만 셈 (어떤 키인지 안 봄, 타이핑 반응 켰을 때만)
 │       ├── Menu/
 │       │   ├── TrayMenu.swift         # 트레이 아이콘·펫 메뉴, MenuNode → HMENU, 메뉴가 열린 동안 타이머 틱, 메시지 상자·입력 창 대화
-│       │   └── TextPrompt.swift       # 이름 짓기 입력 창 (모달, Enter·Esc, 열린 동안에도 펫 틱)
+│       │   ├── TextPrompt.swift       # 이름 짓기 입력 창 (모달, Enter·Esc, 열린 동안에도 펫 틱)
+│       │   └── TrayIcon.swift         # 첫 펫 그림 → 트레이 아이콘
 │       ├── Skin/WinSprite.swift       # PNGDecoder → 미리 곱한 BGRA
 │       └── Stage/
 │           ├── OverlayStage.swift     # 모니터마다 오버레이, 맥과 같은 층 순서로 펫·모자·소품·물건·무기·입자·말풍선 (PetStage)
 │           ├── BubblePainter.swift    # 말풍선 글자 재기·그림 보관 (DeskPetText 호출)
 │           └── LayeredOverlay.swift   # 투명·최상위 창, 펫 위에서만 클릭 받기(WS_EX_TRANSPARENT 전환), DIB + 바뀐 영역만 UpdateLayeredWindowIndirect
 ├── Sources/DeskPetText/           # 윈도우 전용 C++ 타깃: DirectWrite·Direct2D 말풍선(컬러 이모지)을 C 함수로 감쌈
+├── Sources/DeskPetAudio/          # 윈도우 전용 C++ 타깃: WASAPI로 마이크를 쓰는 앱이 있는지만 (소리 안 읽음)
 ├── Assets/Skins/                  # 캐릭터 23종 (공개 19종 + 로컬 전용 Boy·Girl·Goblin·Radish), Nabi·Bolt는 SpriteForge 생성물
 ├── Assets/Rigs/                   # SpriteForge 원본: 리그(<이름>.rig.json), 원본 스킨 매달리기(<스킨>.hang.json), 시트 가져오기(<이름>.import.json)
 ├── Assets/Sources/                # 가져온 무료 에셋 원본 줄 PNG와 출처·라이선스 메모 (PixelAdventure1, SunnyLand, NinjaAdventure, DungeonTilesetII)
@@ -170,10 +175,13 @@ private/
 ├── .claude/skills/deskpet-sprite/ # 에이전트용 캐릭터 제작 스킬 (sprite-gen 기조, 추가 구독·API 없음)
 ├── scripts/
 │   ├── package_app.sh             # Release 빌드, ad-hoc 서명, DeskPet.app·.dmg·.zip 생성 (기본 공개용, --with-private)
+│   ├── package_windows.ps1        # 윈도우: 창 없는 릴리스 빌드 + 필요한 DLL만 + 공개 캐릭터 → dist\DeskPet-windows.zip
 │   ├── verify.sh                  # Core 홀로 컴파일·맥 전용 import 금지 확인 + 모델 검증 실행 (맥 밖에서는 공통 코드와 검사만)
 │   └── checks/                    # 검증 시나리오 (스킨, 월드, 행동, 장시간 무작위, 잠·클릭·인사·일정). MacSkinChecks만 맥 전용
-├── .github/workflows/core-portability.yml # Windows(DeskPet.exe 빌드·검사·연기 시험)·Linux(Core 빌드·검사)
+├── .github/workflows/core-portability.yml # Windows(DeskPet.exe 빌드·검사·연기 시험, 포장·설치)·Linux(Core 빌드·검사)
+├── .github/workflows/release-windows.yml # 태그 push 때 윈도우 zip·install.ps1을 그 릴리스에 올림 (없으면 초안)
 ├── install.sh                     # 터미널 한 줄 설치·지우기 (Releases의 DeskPet.zip)
+├── install.ps1                    # 윈도우 PowerShell 한 줄 설치·지우기 (Releases의 DeskPet-windows.zip, ASCII 전용)
 ├── Package.swift
 └── run.sh                         # DeskPet.app 실행
 ```
@@ -298,6 +306,7 @@ tail -f ~/Library/Logs/DeskPet/pet_debug.log
   * 2a: 시계(`HabitatLoop`)·끌기 판정·설정·그리기 목록·메뉴 데이터가 Core에 있다. 맥 껍데기는 읽기(`DesktopSource`·`HostSenses`)·그리기(`PetStage`)·메뉴 렌더링·대화 상자·`UserDefaults`만 맡는다. 윈도우판은 같은 약속을 Win32로 구현한다(설계 명세 5.4).
   * 2b: 윈도우에서는 `swift build`가 `DeskPet.exe`(Core + Windows)를 만든다. CI 연기 시험은 메모장을 띄우고 `DeskPet.exe --smoke 8 --report smoke.json`을 돌려 모니터·창 목록·펫·트레이·틱 수를 확인한다(보고서와 로그는 아티팩트 `windows-smoke`). 2c부터 모니터마다 투명 창에 펫을 그리고, 연기 시험이 보이는 픽셀 수를 확인하며 화면을 캡처한다(`screen.png`). 2d부터 펫을 누르고 끌어 던지고 우클릭 메뉴를 연다. 연기 시험(`--smoke 14 --drive`)이 펫이 탄 창을 옮겨 따라오는지, 실제 입력으로 끌기·찌르기·펫 메뉴가 되는지 확인한다.
   * 3단계: 말풍선은 C++ 타깃 `DeskPetText`(DirectWrite·Direct2D, 컬러 이모지)가 그리고, 모자·소품·무기·물건·입자는 Core의 `DotImage`·`SceneEffects`·`PixelCanvas`로 직접 그린다. 이름 짓기는 `TextPrompt`. 연기 시험은 `--smoke 22 --drive --scene`으로 층별 그린 수·말풍선 색 픽셀·물건 클릭·이름 짓기를 확인하고 3초마다 화면을 캡처한다(`screen-*.png`).
+  * 4단계: 키 수(Raw Input, 내용 없음)·통화 중(WASAPI)·Claude 사용량 파일·펫 트레이 아이콘. 포장은 `scripts/package_windows.ps1` → `install.ps1`, CI의 `Windows (package + install)`이 설치본을 Swift 없는 PATH로 실행해 확인한다. 실제 릴리스(태그·`release-windows.yml`)와 README 윈도우 안내는 사용자 확인 뒤. CI 도구 모음(6.3.3+Asserts)의 릴리스 최적화가 열거형 케이스를 함수로 넘기는 코드(`.map(Case.x)`)에서 멈추므로 Core에서도 클로저로 쓴다.
 * XCTest는 Command Line Tools만 설치된 환경에서 쓸 수 없어 `scripts/checks/` 실행 파일로 검증한다. `swift build` 때 나오는 `could not determine XCTest paths` 경고는 같은 이유이며 빌드에 영향 없음.
 
 ---

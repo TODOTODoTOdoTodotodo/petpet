@@ -34,7 +34,8 @@ struct LaunchOptions {
 
 /// This object is responsible for the Windows app: wiring the shared pieces (settings, skins, pets, collection,
 /// status menu, habitat loop) to the Windows readers, the overlays' pointer input, the tray and pet menus and a
-/// hidden message window, stepping the loop on each 60Hz frame tick, and applying the settings only the shell owns.
+/// hidden message window, the key-press counter and Claude usage file, stepping the loop on each 60Hz frame tick, and
+/// applying the settings only the shell owns.
 /// Under `--smoke` it also runs the CI pointer driver and scene probe and writes their report.
 final class WindowsApp {
     /// 숨은 메시지 창의 클래스 이름 (창 목록에서 제외)
@@ -53,6 +54,11 @@ final class WindowsApp {
     private let desktop = WindowsDesktop()
     private let stage = OverlayStage()
     private let loop: HabitatLoop
+    private let keys: RawKeyCounter
+    private let senses: WindowsHostSenses
+    private let usage = ClaudeUsagePoller()
+    /// 메뉴에 보일 Claude 사용량 요약 (파일이 없으면 nil)
+    private var usageText: String?
     private let tray: TrayMenu
     private let pointerInput: OverlayPointerInput
     private var driver: SmokeDriver?
@@ -72,7 +78,9 @@ final class WindowsApp {
         self.options = options
         skinsDirectory = SkinFolder.locate()
         library = SkinLibrary(directory: skinsDirectory, loader: WinSprite.load)
-        loop = HabitatLoop(roster: roster, desktop: desktop, senses: WindowsHostSenses(), stage: stage)
+        keys = RawKeyCounter(window: window)
+        senses = WindowsHostSenses(keys: keys)
+        loop = HabitatLoop(roster: roster, desktop: desktop, senses: senses, stage: stage)
         tray = TrayMenu(window: window)
         pointerInput = OverlayPointerInput(gesture: loop.gesture)
     }
@@ -126,8 +134,13 @@ final class WindowsApp {
         }
         lineup.restore()
         collection.syncPets()
+        keys.listen(settings.typingReactionsEnabled)
+        usage.onChange = { [weak self] snapshot in self?.applyUsage(snapshot) }
 
-        log(tray.show(tip: "DeskPet") ? "🔔 tray icon shown" : "⚠️ tray icon failed")
+        // 트레이 아이콘은 첫 펫이 서 있는 그림
+        let look = roster.pets.first?.appearance as? WinSkin
+        tray.icon = look?.sprite(for: .idle, facing: .east, elapsed: 0).flatMap { TrayIcon.make(from: $0.texture.image, mirrored: $0.mirrored) }
+        log(tray.show(tip: "DeskPet") ? "🔔 tray icon shown" + (tray.icon == nil ? " (default icon)" : " (\(look?.name ?? "pet"))") : "⚠️ tray icon failed")
         if options.smokeSeconds != nil, options.drivesInput {
             driver = SmokeDriver(roster: roster) { [unowned self] in self.loop.world }
             log("🧪 smoke driver on")
@@ -164,6 +177,10 @@ final class WindowsApp {
                 deferredCommand = nil
                 appMenu.perform(command)
             }
+        case UINT(WM_INPUT):
+            // 키 누름만 셈. 기본 처리로 넘겨 입력 버퍼를 정리함
+            keys.receive(lParam)
+            return nil
         case UINT(WM_INITMENUPOPUP):
             if let notice = tray.openNotice(for: wParam) { appMenu.perform(notice) }
         case taskbarCreated:
@@ -182,6 +199,7 @@ final class WindowsApp {
         guard !isQuitting else { return }
         let now = ProcessInfo.processInfo.systemUptime
         loop.tick(now: now)
+        usage.poll(now: now)
         driver?.tick(now: now)
         probe?.tick(now: now)
         ticks += 1
@@ -191,9 +209,17 @@ final class WindowsApp {
         }
     }
 
+    /// Claude 사용량을 펫 기력과 메뉴 요약에 반영 (맥과 같은 셈)
+    private func applyUsage(_ snapshot: ClaudeUsage?) {
+        let now = Date()
+        roster.vigor = settings.tiresWithClaudeUsage ? Vigor(usedPercent: snapshot?.effectivePercent(at: now)) : .fresh
+        usageText = snapshot.map { $0.summary(at: now) ?? "" }
+    }
+
     private func quit() {
         guard !isQuitting else { return }
         isQuitting = true
+        keys.listen(false)
         tray.remove()
         stage.close()
         WindowsLogger.shared.log("👋 quit")
@@ -221,7 +247,11 @@ final class WindowsApp {
             "stage": stage.drawReport,
             "menuRows": appMenu.nodes().count,
             "tray": tray.isShown,
+            "trayPetIcon": tray.icon != nil,
             "ticks": ticks,
+            "senses": ["keyPresses": keys.total, "listening": keys.isListening, "microphoneChecks": senses.microphoneChecks,
+                       "microphone": Int(senses.lastMicrophone.inUse), "captureDevices": Int(senses.lastMicrophone.devices)],
+            "usage": ["summary": usageText ?? "", "vigor": roster.vigor.rawValue],
             "drive": driver?.report ?? [:],
             "scene": probe?.report ?? [:],
             "settingsFile": WindowsPaths.settingsFile.path,
@@ -235,8 +265,7 @@ final class WindowsApp {
 }
 
 extension WindowsApp: AppMenuHost {
-    /// Claude 사용량은 4단계에서
-    var usageSummary: String? { nil }
+    var usageSummary: String? { usageText }
 
     /// 일정 말풍선은 윈도우 캘린더 출처를 정한 뒤 (보류)
     var calendarAccessDenied: Bool { false }
@@ -247,6 +276,10 @@ extension WindowsApp: AppMenuHost {
             loop.quietDuringCalls = settings.quietDuringCalls
         case .opacity:
             stage.opacity = settings.opacity
+        case .toggle(.typing):
+            keys.listen(settings.typingReactionsEnabled)
+        case .toggle(.tiresWithUsage):
+            applyUsage(usage.latest)
         default:
             break
         }
