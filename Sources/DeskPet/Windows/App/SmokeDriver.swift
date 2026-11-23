@@ -36,9 +36,7 @@ final class SmokeDriver {
         self.world = world
         steps = [
             findRider, slideWindow, wait(1.0), recordFollow,
-            aim, wait(0.25), drag,
-            wait(2.0), aim, wait(0.25), poke,
-            wait(0.8), aim, wait(0.25), openMenu, closeMenu,
+            drag, wait(2.0), poke, wait(0.8), openMenu, closeMenu,
         ]
     }
 
@@ -139,24 +137,24 @@ final class SmokeDriver {
         return true
     }
 
-    /// 펫 잡기 영역 가운데로 커서를 옮김
-    @discardableResult
-    private func aim(_ elapsed: TimeInterval = 0) -> Bool {
+    /// 펫 잡기 영역 가운데로 커서를 옮김. 누르기는 다음 틱에: 그 사이 routeMouse가 이 자리를 보고 클릭 관통을 꺼야 함
+    /// (같은 틱에 누르면 지난 커서 자리 기준으로 관통이 켜져 있어, 움직이는 펫이면 클릭이 뒤 창으로 감)
+    private func aim() {
         guard let pet = target else {
             notes.append("no pet to aim at")
-            return true
+            return
         }
         let point = WindowsCoordinates.current().screenPoint(CGPoint(x: pet.grabRect.midX, y: pet.grabRect.midY))
         _ = SetCursorPos(point.x, point.y)
-        return true
     }
 
-    /// 누르고 10틱 동안 위로 끌어올린 뒤 놓음 (던지기)
+    /// 겨누고, 다음 틱에 누르고 10틱 동안 위로 끌어올린 뒤 놓음 (던지기)
     private func drag(_ elapsed: TimeInterval) -> Bool {
         if pressed == 0 {
             aim()
+        } else if pressed == 1 {
             send(MOUSEEVENTF_LEFTDOWN)
-        } else if pressed <= 10 {
+        } else if pressed <= 11 {
             var point = POINT()
             _ = GetCursorPos(&point)
             move(to: POINT(x: point.x - 4, y: point.y - 8))
@@ -169,22 +167,30 @@ final class SmokeDriver {
         return false
     }
 
+    /// 겨누고, 누르고, 놓음
     private func poke(_ elapsed: TimeInterval) -> Bool {
-        if pressed == 0 {
+        switch pressed {
+        case 0: aim()
+        case 1: send(MOUSEEVENTF_LEFTDOWN)
+        default:
+            send(MOUSEEVENTF_LEFTUP)
+            pressed = 0
+            return true
+        }
+        pressed += 1
+        return false
+    }
+
+    /// 겨누고, 다음 틱에 우클릭
+    private func openMenu(_ elapsed: TimeInterval) -> Bool {
+        guard pressed > 0 else {
             aim()
-            send(MOUSEEVENTF_LEFTDOWN)
             pressed = 1
             return false
         }
-        send(MOUSEEVENTF_LEFTUP)
-        pressed = 0
-        return true
-    }
-
-    private func openMenu(_ elapsed: TimeInterval) -> Bool {
-        aim()
         send(MOUSEEVENTF_RIGHTDOWN)
         send(MOUSEEVENTF_RIGHTUP)
+        pressed = 0
         return true
     }
 
