@@ -1,11 +1,13 @@
 import Foundation
 import WinSDK
 
-/// 실행 옵션 (`--smoke 초`: 그 시간만 돌고 보고서를 남긴 뒤 끝남, `--report 경로`, `--drive`: 연기 시험 중 창 옮기기·펫 누르기)
+/// 실행 옵션 (`--smoke 초`: 그 시간만 돌고 보고서를 남긴 뒤 끝남, `--report 경로`, `--drive`: 연기 시험 중 창 옮기기·펫 누르기,
+/// `--scene`: 연기 시험 중 모자·말풍선·무기·물건 클릭·이름 짓기)
 struct LaunchOptions {
     var smokeSeconds: TimeInterval?
     var reportPath = "deskpet-smoke.json"
     var drivesInput = false
+    var stagesScene = false
 
     init(arguments: [String]) {
         var index = 1
@@ -20,6 +22,8 @@ struct LaunchOptions {
                 index += 1
             case "--drive":
                 drivesInput = true
+            case "--scene":
+                stagesScene = true
             default:
                 break
             }
@@ -36,6 +40,8 @@ final class WindowsApp {
     static let windowClass = "DeskPetHost"
     /// 창 프로시저가 찾아오는 앱 (C 콜백은 문맥을 잡을 수 없음)
     static var current: WindowsApp?
+    /// 미뤄 둔 메뉴 명령을 메시지 루프에서 실행하라는 메시지 (연기 시험의 이름 짓기)
+    static let deferredCommandMessage = UINT(WM_APP) + 2
 
     private let window: HWND
     private let options: LaunchOptions
@@ -49,6 +55,8 @@ final class WindowsApp {
     private let tray: TrayMenu
     private let pointerInput: OverlayPointerInput
     private var driver: SmokeDriver?
+    private var probe: SceneProbe?
+    private var deferredCommand: MenuCommand?
     private let treasuryStore = TreasuryStore(archive: FileTreasuryArchive())
     private var collection: CollectionMenu!
     private var lineup: PetLineup<WinSprite>!
@@ -89,7 +97,7 @@ final class WindowsApp {
         treasuryStore.onEvent = log
         let treasury = treasuryStore.load()
         log("🎒 collection: \(treasury.total) items, \(treasury.counts.count) kinds")
-        collection = CollectionMenu(treasury: treasury, store: treasuryStore, roster: roster, dialogs: WindowsMenuDialogs()) { [unowned self] in
+        collection = CollectionMenu(treasury: treasury, store: treasuryStore, roster: roster, dialogs: WindowsMenuDialogs(host: window)) { [unowned self] in
             self.settings.menuLanguage
         }
         collection.onChange = {}
@@ -123,6 +131,16 @@ final class WindowsApp {
             driver = SmokeDriver(roster: roster) { [unowned self] in self.loop.world }
             log("🧪 smoke driver on")
         }
+        if options.smokeSeconds != nil, options.stagesScene {
+            probe = SceneProbe(roster: roster, world: { [unowned self] in self.loop.world }, isReady: { [unowned self] in
+                guard let report = self.driver?.report else { return true }
+                return (report["finishedSteps"] as? Int) == (report["totalSteps"] as? Int)
+            }, perform: { [unowned self] command in
+                self.deferredCommand = command
+                _ = PostMessageW(self.window, Self.deferredCommandMessage, 0, 0)
+            })
+            log("🧪 scene probe on")
+        }
         loop.tick(now: ProcessInfo.processInfo.systemUptime)
     }
 
@@ -140,6 +158,11 @@ final class WindowsApp {
             }
         case UINT(WM_TIMER) where wParam == TrayMenu.menuTimerID:
             tick()
+        case Self.deferredCommandMessage:
+            if let command = deferredCommand {
+                deferredCommand = nil
+                appMenu.perform(command)
+            }
         case UINT(WM_INITMENUPOPUP):
             if let notice = tray.openNotice(for: wParam) { appMenu.perform(notice) }
         case taskbarCreated:
@@ -159,6 +182,7 @@ final class WindowsApp {
         let now = ProcessInfo.processInfo.systemUptime
         loop.tick(now: now)
         driver?.tick(now: now)
+        probe?.tick(now: now)
         ticks += 1
         if let seconds = options.smokeSeconds, now - startedAt >= seconds {
             writeSmokeReport()
@@ -193,10 +217,12 @@ final class WindowsApp {
             },
             "drawings": stage.lastDrawings,
             "overlays": stage.summary,
+            "stage": stage.drawReport,
             "menuRows": appMenu.nodes().count,
             "tray": tray.isShown,
             "ticks": ticks,
             "drive": driver?.report ?? [:],
+            "scene": probe?.report ?? [:],
             "settingsFile": WindowsPaths.settingsFile.path,
             "log": WindowsLogger.shared.fileURL.path,
         ]

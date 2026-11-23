@@ -46,8 +46,20 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "DeskPet",
+            dependencies: ["DeskPetText"],
             path: "Sources/DeskPet",
             sources: ["Core", "Windows"]
+        ),
+        // 말풍선 글자 (DirectWrite·Direct2D는 C++ 헤더뿐이라 C 함수로 감쌈)
+        .target(
+            name: "DeskPetText",
+            path: "Sources/DeskPetText",
+            linkerSettings: [
+                .linkedLibrary("d2d1"),
+                .linkedLibrary("dwrite"),
+                .linkedLibrary("windowscodecs"),
+                .linkedLibrary("ole32")
+            ]
         )
     ]
 )

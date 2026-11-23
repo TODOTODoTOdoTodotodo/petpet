@@ -35,6 +35,7 @@ struct CheckRunner {
         SettingsChecks.run(check)
         SceneChecks.run(check)
         CanvasChecks.run(check)
+        StageArtChecks.run(check)
         ThrowAimChecks.run(check)
         HeadTrackerChecks.run(check, skinsDirectory: skins)
         AppMenuChecks.run(check, skinsDirectory: skins)
