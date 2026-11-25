@@ -75,7 +75,7 @@ final class OverlayStage: PetStage {
     }
 
     var drawReport: [String: Any] {
-        ["mostDrawn": mostDrawn, "bubblesPainted": bubbles.painted, "bubbleFailures": bubbles.failures,
+        ["mostDrawn": mostDrawn, "bubblesPainted": bubbles.painted, "bubblesBadged": bubbles.badged, "bubbleFailures": bubbles.failures,
          "bubbleColorPixels": bubbles.mostColoredPixels]
     }
 

@@ -566,7 +566,14 @@
 - **펫 클릭 → 앱 앞으로**: 말풍선에 `appProcessID`가 있는 펫(✅·✋·💤)을 누르면 `PetPointerGesture`가 `agents.bringForward` → 껍데기가 `NSRunningApplication.activate`. ✋는 확인으로 닫힘.
 - 메뉴 **AI Task Alerts / AI 작업 알림**(기본 켜짐). 끄면 들어온 신호를 버리고 떠 있던 ✋도 거둠.
 - Claude Code 훅: `UserPromptSubmit` → working, `Stop` → done, `Notification`(권한 요청·입력 대기) → waiting. 설정 줄은 README "AI 작업 알림". 상태줄과 달리 데스크톱 앱 Code 탭에서도 돈다.
-- 윈도우: 받은 편지함·조율자·찾아가기는 Core라 그대로 쓸 수 있음. 앱 찾기(부모 프로세스·실행 파일 아이콘), 말풍선 아이콘 그리기, 작업 표시줄 단추 자리(UI Automation, 권한 불필요), 앱 앞으로(`SetForegroundWindow`)는 아직 없음.
+- 윈도우 (2026-11-25, `Windows/App/WindowsAgentHosts.swift`):
+  - 받은 편지함: Foundation 타이머는 윈도우 메시지 루프에서 돌지 않아, 앱 틱이 0.1초마다 `AgentSignalInbox.check()`를 부름(`start()`는 쓰지 않음, 맥은 그대로 1초 타이머).
+  - 앱 찾기: toolhelp 스냅샷으로 부모를 따라 올라가 보이는 최상위 창(제목 있음, 소유·도구·cloaked 창 아님)을 가진 첫 프로세스. DeskPet 자신은 건너뛰고, 탐색기·svchost까지 올라가면 못 찾은 것으로 봄. 예전 콘솔 창은 윈도우가 그 콘솔을 띄운 프로세스의 창으로 알려 줘서 그대로 잡힘.
+  - 배지: 창 아이콘(`WM_GETICON` → 클래스 아이콘 → 실행 파일 아이콘)을 32px로 그려, 투명 여백을 자르고 12×12 칸 평균(알파 절반 이상만 불투명)으로 만듦. 말풍선은 `BubblePainter`가 글자 앞에 1.5배 도트로 찍고 간격 3pt(맥과 같음). DirectWrite 글자는 `textInset`만큼 오른쪽으로.
+  - 앞으로: 그 프로세스의 맨 앞 창을 최소화면 되살리고 `SetForegroundWindow`. 펫을 누른 직후라 이 프로세스가 마지막 입력을 받아 허용됨(입력 붙이기 같은 우회는 쓰지 않음).
+  - 작업 표시줄 아이콘 찾아가기는 이번에 뺌(`supportsDockVisits` 기본 false라 메뉴에도 안 보임). 끝나면 그 앱 창으로 도약.
+  - 훅 PID: Git Bash의 `$PPID`는 윈도우 번호가 아님(부모가 MSYS가 아니면 1). README 윈도우 줄은 `/proc/$$/winpid`(곧 끝나는 bash 자신)를 적고, 파일이 사라질 때까지 0.1초씩 최대 세 번 기다림. 그동안 DeskPet이 bash에서 부모를 따라 올라감. DeskPet이 꺼져 있으면 약 0.3초 늦어질 뿐.
+  - CI: 훅 줄을 Git Bash로 돌려 bash의 윈도우 번호가 기다리는 동안 살아 있는지, 켜진 DeskPet이 파일을 가져가는지 확인. 연기 시험은 메모장 아래에 숨은 자식(ping)을 띄우고 그 번호로 기다림 신호를 넣어, 부모를 따라 메모장을 찾고 메모장 아이콘 ✋가 그려지는지, 메모장을 내린 뒤 펫을 누르면 다시 맨 앞으로 오는지 봄.
 
 ## 7. 스킨
 - 스킨은 `PetSkin<Frame>`: 프레임 목록·애니메이션 선택은 공통 코드, 그림 형식(`Frame`)과 PNG 읽기는 플랫폼이 정한다. 맥은 `MacSkin = PetSkin<SKTexture>`, `MacSpriteLoader`가 텍스처와 RGBA 픽셀(`SpritePixels`, 위쪽 줄부터)을 넘긴다.

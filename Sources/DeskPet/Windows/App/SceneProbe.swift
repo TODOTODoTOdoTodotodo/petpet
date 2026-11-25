@@ -5,8 +5,11 @@ import WinSDK
 /// naming level (in the runner's throwaway collection), dresses it (hat, held item, an emoji speech bubble, Lv.5 footstep
 /// sparkles) and presses a do-nothing key a few times for the key counter. Once the pointer driver is done it has the pet
 /// throw a weapon that hits and one that misses, drops an item and clicks it with real input, and names the pet through
-/// the menu's text prompt, filling the prompt like a person would. What happened goes into the smoke report; what got
-/// drawn is the stage's. It only runs on the CI runner; a normal launch never creates it.
+/// the menu's text prompt, filling the prompt like a person would. Last it tries an AI task alert end to end: it opens
+/// Notepad, starts a hidden child process under it (as a terminal hosts an AI tool), drops a "waiting" signal naming that
+/// child into the inbox, checks a pet holds ✋ with Notepad's icon, minimizes Notepad and pokes the pet so Notepad comes
+/// back to the front. What happened goes into the smoke report; what got drawn is the stage's.
+/// It only runs on the CI runner; a normal launch never creates it.
 final class SceneProbe {
     /// 이름 짓기 시험에 넣는 이름 (한글이 입력 칸을 거쳐 그대로 오는지)
     static let typedName = "나비짱"
@@ -15,6 +18,14 @@ final class SceneProbe {
 
     private let roster: PetRoster
     private let treasury: Treasury
+    /// AI 작업 알림 받는 함 폴더
+    private let inbox: URL
+    /// 시험용 호스트 앱(메모장)과 그 아래 숨은 자식 프로세스
+    private var host: Process?
+    private var hostPID: DWORD?
+    private var child: HANDLE?
+    private var childPID: DWORD?
+    private var holder: Pet?
     private let world: () -> World
     private let isReady: () -> Bool
     /// 앱 메뉴 명령을 메시지 루프에서 실행 (입력 창은 모달이라 틱 안에서 바로 열지 않음)
@@ -30,13 +41,16 @@ final class SceneProbe {
     private var notes: [String] = []
     private var results: [String: Any] = [:]
 
-    init(roster: PetRoster, treasury: Treasury, world: @escaping () -> World, isReady: @escaping () -> Bool, perform: @escaping (MenuCommand) -> Void) {
+    init(roster: PetRoster, treasury: Treasury, inbox: URL, world: @escaping () -> World, isReady: @escaping () -> Bool,
+         perform: @escaping (MenuCommand) -> Void) {
         self.roster = roster
         self.treasury = treasury
+        self.inbox = inbox
         self.world = world
         self.isReady = isReady
         self.perform = perform
-        steps = [dress, pressKeys, waitForDriver, throwWeapons, wait(1.5), dropItem, clickItem, wait(0.5), openNaming, fillPrompt, checkName]
+        steps = [dress, pressKeys, waitForDriver, throwWeapons, wait(1.5), dropItem, clickItem, wait(0.5), openNaming, fillPrompt, checkName,
+                 openHost, signalWaiting, waitForNotice, wait(0.6), pokeHolder, checkForeground, closeHost]
     }
 
     var report: [String: Any] {
@@ -187,6 +201,165 @@ final class SceneProbe {
         }
         results["renamed"] = true
         return true
+    }
+
+    // MARK: - AI task alert
+
+    /// 메모장을 띄우고 창이 보일 때까지 (8초까지). 새 메모장이 다른 프로세스로 넘어가면 메모장 창을 가진 프로세스로
+    private func openHost(_ elapsed: TimeInterval) -> Bool {
+        if host == nil {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "C:\\Windows\\System32\\notepad.exe")
+            do {
+                try process.run()
+            } catch {
+                notes.append("notepad did not start: \(error)")
+                return true
+            }
+            host = process
+        }
+        let windows = WindowsAgentHosts.topWindows()
+        if let pid = host.map({ DWORD($0.processIdentifier) }), windows[pid] != nil {
+            hostPID = pid
+        } else if let pid = windows.keys.first(where: { Self.exeName(of: $0)?.lowercased() == "notepad.exe" }) {
+            hostPID = pid
+        }
+        guard hostPID == nil, elapsed < 8 else {
+            if hostPID == nil { notes.append("notepad window never appeared") }
+            results["agentHostPID"] = hostPID.map { Int($0) } ?? 0
+            return true
+        }
+        return false
+    }
+
+    /// 메모장 아래에 창 없는 자식(ping)을 띄우고, 그 자식 번호로 기다림 신호를 받는 함에 넣음 (못 띄우면 메모장 번호로)
+    private func signalWaiting(_ elapsed: TimeInterval) -> Bool {
+        guard let hostPID else { return true }
+        if let spawned = Self.spawnHidden(under: hostPID) {
+            childPID = spawned.pid
+            child = spawned.process
+        } else {
+            notes.append("hidden child under notepad failed \(GetLastError()); signaling notepad itself")
+        }
+        let pid = childPID ?? hostPID
+        results["agentSignalPID"] = Int(pid)
+        let json = "{\"kind\":\"waiting\",\"source\":\"smoke\",\"pid\":\(pid)}"
+        let temporary = inbox.appendingPathComponent("smoke.tmp"), final = inbox.appendingPathComponent("smoke.json")
+        do {
+            try Data(json.utf8).write(to: temporary)
+            try? FileManager.default.removeItem(at: final)
+            try FileManager.default.moveItem(at: temporary, to: final)
+        } catch {
+            notes.append("signal file not written: \(error)")
+        }
+        return true
+    }
+
+    /// 어느 펫이 그 세션의 ✋와 메모장 아이콘을 들 때까지 (4초까지). 들면 메모장을 내려 다른 앱을 보는 상태로
+    private func waitForNotice(_ elapsed: TimeInterval) -> Bool {
+        guard let pid = childPID ?? hostPID else { return true }
+        let topic = "agent:smoke:\(pid)"
+        guard let pet = roster.pets.first(where: { $0.noticeTopic == topic }) else {
+            if elapsed > 4 { notes.append("no pet took the waiting signal") }
+            return elapsed > 4
+        }
+        holder = pet
+        results["agentNotice"] = pet.speech?.text ?? ""
+        results["agentBadge"] = pet.speech?.badge?.id ?? ""
+        results["agentApp"] = pet.speech?.appProcessID.map { Int($0) } ?? 0
+        if let hostPID, let window = WindowsAgentHosts.topWindows()[hostPID] { _ = ShowWindow(window, SW_MINIMIZE) }
+        return true
+    }
+
+    /// 알림을 든 펫을 겨누고 다음 틱에 실제 클릭 (그 앱을 앞으로 불러와야 함)
+    private func pokeHolder(_ elapsed: TimeInterval) -> Bool {
+        guard let pet = holder else { return true }
+        switch pressed {
+        case 0:
+            let point = WindowsCoordinates.current().screenPoint(CGPoint(x: pet.grabRect.midX, y: pet.grabRect.midY))
+            _ = SetCursorPos(point.x, point.y)
+        case 1:
+            send(MOUSEEVENTF_LEFTDOWN)
+            send(MOUSEEVENTF_LEFTUP)
+        default:
+            pressed = 0
+            return true
+        }
+        pressed += 1
+        return false
+    }
+
+    /// 메모장이 맨 앞으로 오고 알림이 닫혔는지 (2초까지)
+    private func checkForeground(_ elapsed: TimeInterval) -> Bool {
+        guard let hostPID, holder != nil else { return true }
+        var pid: DWORD = 0
+        if let front = GetForegroundWindow() { _ = GetWindowThreadProcessId(front, &pid) }
+        let cleared = holder?.isShowingNotice == false
+        guard pid == hostPID, cleared || elapsed > 2 else {
+            if elapsed > 2 {
+                results["agentForeground"] = false
+                results["agentCleared"] = cleared
+            }
+            return elapsed > 2
+        }
+        results["agentForeground"] = true
+        results["agentCleared"] = cleared
+        return true
+    }
+
+    private func closeHost(_ elapsed: TimeInterval) -> Bool {
+        if let child {
+            _ = TerminateProcess(child, 0)
+            _ = CloseHandle(child)
+            self.child = nil
+        }
+        // 띄운 메모장만 닫음 (CI가 먼저 띄운 메모장은 창 목록 확인에 쓰므로 그대로)
+        if host?.isRunning == true { host?.terminate() }
+        host = nil
+        return true
+    }
+
+    /// 창 없는 ping을 parent의 자식으로 띄움 (PROC_THREAD_ATTRIBUTE_PARENT_PROCESS). 터미널 안 AI 도구를 흉내 냄
+    private static func spawnHidden(under parent: DWORD) -> (pid: DWORD, process: HANDLE)? {
+        // PROCESS_CREATE_PROCESS
+        guard let parentHandle = OpenProcess(DWORD(0x0080), false, parent) else { return nil }
+        defer { _ = CloseHandle(parentHandle) }
+        var size: SIZE_T = 0
+        _ = InitializeProcThreadAttributeList(nil, 1, 0, &size)
+        guard size > 0 else { return nil }
+        let storage = UnsafeMutableRawPointer.allocate(byteCount: Int(size), alignment: 16)
+        defer { storage.deallocate() }
+        let attributes = OpaquePointer(storage)
+        guard InitializeProcThreadAttributeList(attributes, 1, 0, &size) else { return nil }
+        defer { DeleteProcThreadAttributeList(attributes) }
+        var parentValue: HANDLE? = parentHandle
+        // PROC_THREAD_ATTRIBUTE_PARENT_PROCESS
+        guard UpdateProcThreadAttribute(attributes, 0, DWORD_PTR(0x0002_0000), &parentValue,
+                                        SIZE_T(MemoryLayout<HANDLE>.size), nil, nil) else { return nil }
+        var startup = STARTUPINFOEXW()
+        startup.StartupInfo.cb = DWORD(MemoryLayout<STARTUPINFOEXW>.size)
+        startup.lpAttributeList = attributes
+        var info = PROCESS_INFORMATION()
+        var command = "C:\\Windows\\System32\\PING.EXE -n 60 127.0.0.1".wide
+        // EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW
+        let flags = DWORD(0x0008_0000 | 0x0800_0000)
+        let created = withUnsafeMutablePointer(to: &startup) { extended in
+            extended.withMemoryRebound(to: STARTUPINFOW.self, capacity: 1) { plain in
+                CreateProcessW(nil, &command, nil, nil, false, flags, nil, nil, plain, &info)
+            }
+        }
+        guard created, let process = info.hProcess else { return nil }
+        _ = CloseHandle(info.hThread)
+        return (info.dwProcessId, process)
+    }
+
+    private static func exeName(of pid: DWORD) -> String? {
+        guard let process = OpenProcess(DWORD(PROCESS_QUERY_LIMITED_INFORMATION), false, pid) else { return nil }
+        defer { _ = CloseHandle(process) }
+        var buffer = [WCHAR](repeating: 0, count: 1024)
+        var size = DWORD(buffer.count)
+        guard QueryFullProcessImageNameW(process, 0, &buffer, &size) else { return nil }
+        return String(wide: buffer, count: Int(size)).split(separator: "\\").last.map(String.init)
     }
 
     private func send(_ flag: Int32) {

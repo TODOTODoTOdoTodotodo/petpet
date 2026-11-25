@@ -155,7 +155,8 @@ extern "C" int32_t dp_bubble_draw(const uint16_t *text, int32_t length, const DP
                             D2D1::Point2F(tip + half, bottom - 2), true);
         tailEdge = tailPath(D2D1::Point2F(tip - half, bottom - 0.5f), D2D1::Point2F(tip, bottom + style->tailHeight - 0.5f),
                             D2D1::Point2F(tip + half, bottom - 0.5f), false);
-        words = layout(text, length, style->fontSize, style->bodyWidth, style->bodyHeight);
+        const float inset = fmaxf(0.0f, fminf(style->textInset, style->bodyWidth - 1));
+        words = layout(text, length, style->fontSize, style->bodyWidth - inset, style->bodyHeight);
         if (words) {
             words->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
             words->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
@@ -172,7 +173,7 @@ extern "C" int32_t dp_bubble_draw(const uint16_t *text, int32_t length, const DP
         if (tailFill) target->FillGeometry(tailFill, fill);
         if (tailEdge) target->DrawGeometry(tailEdge, stroke, 1.0f);
         // 4 = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT (윈도우 8.1부터): 이모지를 컬러로
-        if (words) target->DrawTextLayout(D2D1::Point2F(margin, margin), words, ink, static_cast<D2D1_DRAW_TEXT_OPTIONS>(4));
+        if (words) target->DrawTextLayout(D2D1::Point2F(margin + inset, margin), words, ink, static_cast<D2D1_DRAW_TEXT_OPTIONS>(4));
         drawn = SUCCEEDED(target->EndDraw());
     }
 
