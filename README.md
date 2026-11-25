@@ -253,6 +253,22 @@ Claude Code: `~/.claude/settings.json`에 아래 `hooks` 추가 (이미 `hooks`�
 }
 ```
 
+윈도우 Claude Code: 훅이 Git Bash에서 돌아 `$PPID`가 윈도우 프로세스 번호가 아님. 아래처럼 bash 자신의 윈도우 번호(`/proc/$$/winpid`)를 적고, DeskPet이 파일을 가져갈 때까지 최대 0.3초 기다림 (그동안 DeskPet이 부모를 따라 터미널·VS Code 창을 찾음). DeskPet이 꺼져 있으면 0.3초 뒤 그냥 끝남.
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "mkdir -p ~/.deskpet/signals && read w < /proc/$$/winpid && f=~/.deskpet/signals/$$ && printf '{\"kind\":\"working\",\"source\":\"claude\",\"pid\":%s}' $w > $f.tmp && mv $f.tmp $f.json && for i in 1 2 3; do [ -e $f.json ] || break; sleep 0.1; done" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "mkdir -p ~/.deskpet/signals && read w < /proc/$$/winpid && f=~/.deskpet/signals/$$ && printf '{\"kind\":\"done\",\"source\":\"claude\",\"pid\":%s}' $w > $f.tmp && mv $f.tmp $f.json && for i in 1 2 3; do [ -e $f.json ] || break; sleep 0.1; done" }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "mkdir -p ~/.deskpet/signals && read w < /proc/$$/winpid && f=~/.deskpet/signals/$$ && printf '{\"kind\":\"waiting\",\"source\":\"claude\",\"pid\":%s}' $w > $f.tmp && mv $f.tmp $f.json && for i in 1 2 3; do [ -e $f.json ] || break; sleep 0.1; done" }] }]
+  }
+}
+```
+
+- 윈도우에서는 작업 표시줄 아이콘 찾아가기 없음. 끝나면 그 앱 창 위로 도약
+- 앱 아이콘은 그 창의 아이콘(작업 표시줄에 보이는 것)
+- 예전 콘솔 창(conhost)에서도 동작. 탐색기까지 올라가도 창을 못 찾으면 아이콘 없이 기호만
+
 다른 도구도 같은 파일 하나면 됨: `{"kind": "done", "source": "도구 이름", "pid": 도구 프로세스 번호}`를 `~/.deskpet/signals/이름.json`으로 저장. `kind`는 `working`, `done`, `waiting`, `limit` 중 하나.
 
 ## 아이디어 보내기

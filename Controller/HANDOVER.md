@@ -152,10 +152,11 @@ private/
 │       ├── App/
 │       │   ├── WindowsApp.swift       # 공통 조각 연결, 60Hz 진행, 트레이·펫 메뉴 명령, 껍데기 쪽 설정, --smoke 보고서
 │       │   ├── SmokeDriver.swift      # --smoke --drive: 펫이 탄 창 옮기기, SendInput으로 끌기·찌르기·우클릭 메뉴 (CI 전용)
-│       │   ├── SceneProbe.swift       # --smoke --scene: 모자·소품·말풍선, 무기 던지기, 물건 클릭, 입력 창으로 이름 짓기 (CI 전용)
+│       │   ├── SceneProbe.swift       # --smoke --scene: 모자·소품·말풍선, 무기 던지기, 물건 클릭, 입력 창으로 이름 짓기, AI 알림(메모장) (CI 전용)
 │       │   ├── FrameTimer.swift       # 고해상도 대기 타이머 (SetTimer는 31ms로 늘어남)
 │       │   ├── WindowsHostSenses.swift # GetCursorPos·GetLastInputInfo·SetCursorPos, 키 수(RawKeyCounter)·마이크(DeskPetAudio)
 │       │   ├── ClaudeUsagePoller.swift # %APPDATA%\DeskPet\claude-usage.json을 30초마다 읽음 (자격 증명·네트워크 없음)
+│       │   ├── WindowsAgentHosts.swift # AI 신호 pid → 부모를 따라 창 있는 앱 찾기(toolhelp), 창 아이콘 → 12px 배지, 그 앱 앞으로
 │       │   └── WindowsStorage.swift   # %APPDATA%\DeskPet(설정·도감), %LOCALAPPDATA%\DeskPet\Logs, DESKPET_DATA_DIR
 │       ├── World/
 │       │   ├── WindowsDesktop.swift   # EnumDisplayMonitors(작업 영역)·EnumWindows + DWM 프레임·맨 앞 앱
@@ -170,7 +171,7 @@ private/
 │       ├── Skin/WinSprite.swift       # PNGDecoder → 미리 곱한 BGRA
 │       └── Stage/
 │           ├── OverlayStage.swift     # 모니터마다 오버레이, 맥과 같은 층 순서로 펫·모자·소품·물건·무기·입자·말풍선 (PetStage)
-│           ├── BubblePainter.swift    # 말풍선 글자 재기·그림 보관 (DeskPetText 호출)
+│           ├── BubblePainter.swift    # 말풍선 글자 재기·그림 보관 (DeskPetText 호출), 글자 앞 앱 아이콘 도트
 │           └── LayeredOverlay.swift   # 투명·최상위 창, 펫 위에서만 클릭 받기(WS_EX_TRANSPARENT 전환), DIB + 바뀐 영역만 UpdateLayeredWindowIndirect
 ├── Sources/DeskPetText/           # 윈도우 전용 C++ 타깃: DirectWrite·Direct2D 말풍선(컬러 이모지)을 C 함수로 감쌈
 ├── Sources/DeskPetAudio/          # 윈도우 전용 C++ 타깃: WASAPI로 마이크를 쓰는 앱이 있는지만 (소리 안 읽음)
@@ -231,6 +232,7 @@ private/
 * Claude Code 훅(README "AI 작업 알림")이 `~/.deskpet/signals/`에 신호 파일을 남기면, 펫이 그 세션이 도는 앱의 아이콘과 ✅(끝남)·✋(확인 기다림)·💤(한도)를 띄운다. ✋는 펫 클릭, 그 앱으로 이동, 다시 일을 맡기면 닫힌다. 메뉴 **AI Task Alerts**.
 * 직접 시험: `printf '{"kind":"done","source":"claude","pid":%s}' $PPID > ~/.deskpet/signals/t.json`. 로그 `🤖 [Pet-n] claude (app 앱pid) done`.
 * 끝나면 펫이 그 앱의 Dock 아이콘 위로 걸어가 두드리고(메뉴 **Walk To Dock Icon**, 손쉬운 사용 권한), 아니면 그 앱 창으로 도약한다. 로그 `done, to Dock icon x …` / `done, leap to window …`. 아이콘 말풍선을 든 펫을 누르면 그 앱이 앞으로 온다(`bring app … forward`).
+* 윈도우: 훅이 Git Bash에서 돌아 `$PPID`가 윈도우 번호가 아니라서, README 윈도우 줄은 `/proc/$$/winpid`(bash 자신)를 적고 파일이 읽힐 때까지 최대 0.3초 기다린다. 윈도우판은 받는 함을 틱에서 0.1초마다 보고, 그 사이 bash → Claude → 셸 → 터미널로 올라가 창 있는 첫 프로세스를 찾는다. 작업 표시줄 아이콘 찾아가기는 없고(메뉴에도 안 보임) 창으로 도약한다.
 * 할당량 파일을 넓히지 않고 신호로 간 이유: 할당량은 요금제마다 뜻이 다르고, 데스크톱 앱·웹에서는 남지 않으며, 다른 도구의 내부 기록(대화 포함)을 읽어야 해서.
 
 ### 쫓아다니기 참고

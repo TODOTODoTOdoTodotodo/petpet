@@ -34,8 +34,8 @@ struct LaunchOptions {
 
 /// This object is responsible for the Windows app: wiring the shared pieces (settings, skins, pets, collection,
 /// status menu, habitat loop) to the Windows readers, the overlays' pointer input, the tray and pet menus and a
-/// hidden message window, the key-press counter and Claude usage file, stepping the loop on each 60Hz frame tick, and
-/// applying the settings only the shell owns.
+/// hidden message window, the key-press counter, Claude usage file and AI task alert inbox, stepping the loop on each
+/// 60Hz frame tick, and applying the settings only the shell owns.
 /// Under `--smoke` it also runs the CI pointer driver and scene probe and writes their report.
 final class WindowsApp {
     /// 숨은 메시지 창의 클래스 이름 (창 목록에서 제외)
@@ -44,6 +44,8 @@ final class WindowsApp {
     static var current: WindowsApp?
     /// 미뤄 둔 메뉴 명령을 메시지 루프에서 실행하라는 메시지 (연기 시험의 이름 짓기)
     static let deferredCommandMessage = UINT(WM_APP) + 2
+    /// AI 작업 알림 받는 함을 보는 간격. 훅이 파일이 읽힐 때까지 기다리므로 짧게 (맥은 1초 타이머)
+    static let inboxInterval: TimeInterval = 0.1
 
     private let window: HWND
     private let options: LaunchOptions
@@ -59,6 +61,12 @@ final class WindowsApp {
     private let usage = ClaudeUsagePoller()
     /// 메뉴에 보일 Claude 사용량 요약 (파일이 없으면 nil)
     private var usageText: String?
+    /// AI 도구 훅이 남긴 신호와, 그 세션이 사는 앱 찾기. Foundation 타이머는 이 메시지 루프에서 돌지 않아 틱에서 확인함
+    private let agentInbox = AgentSignalInbox(folder: AgentSignalInbox.homeFolder)
+    private let agentHosts = WindowsAgentHosts()
+    private var lastInboxCheck: TimeInterval?
+    /// 앞으로 불러온 횟수와 성공 횟수 (연기 시험 보고서용)
+    private var broughtForward = (asked: 0, succeeded: 0)
     private let tray: TrayMenu
     private let pointerInput: OverlayPointerInput
     private var driver: SmokeDriver?
@@ -94,6 +102,17 @@ final class WindowsApp {
         if library.names.isEmpty { log("⚠️ No skins found at \(skinsDirectory.path)") }
 
         roster.onEvent = log
+        roster.agents.onEvent = log
+        roster.agents.onBringForward = { [unowned self] app in
+            let done = self.agentHosts.bringForward(app)
+            self.broughtForward.asked += 1
+            if done { self.broughtForward.succeeded += 1 }
+            log("🤖 app \(app) brought forward: \(done)")
+        }
+        agentInbox.onSignal = { [unowned self] signal in
+            self.roster.agents.receive(signal, from: self.agentHosts.host(for: signal.processID))
+        }
+        try? FileManager.default.createDirectory(at: AgentSignalInbox.homeFolder, withIntermediateDirectories: true)
         roster.messengerLook = { [weak self] in self?.lineup.nextMessengerLook() }
         loop.onEvent = log
         loop.gesture.onEvent = { [weak self] event in
@@ -146,7 +165,8 @@ final class WindowsApp {
             log("🧪 smoke driver on")
         }
         if options.smokeSeconds != nil, options.stagesScene {
-            probe = SceneProbe(roster: roster, treasury: treasury, world: { [unowned self] in self.loop.world }, isReady: { [unowned self] in
+            probe = SceneProbe(roster: roster, treasury: treasury, inbox: AgentSignalInbox.homeFolder,
+                               world: { [unowned self] in self.loop.world }, isReady: { [unowned self] in
                 guard let report = self.driver?.report else { return true }
                 return (report["finishedSteps"] as? Int) == (report["totalSteps"] as? Int)
             }, perform: { [unowned self] command in
@@ -200,6 +220,10 @@ final class WindowsApp {
         let now = ProcessInfo.processInfo.systemUptime
         loop.tick(now: now)
         usage.poll(now: now)
+        if lastInboxCheck.map({ now - $0 >= Self.inboxInterval }) ?? true {
+            lastInboxCheck = now
+            agentInbox.check()
+        }
         driver?.tick(now: now)
         probe?.tick(now: now)
         ticks += 1
@@ -252,6 +276,8 @@ final class WindowsApp {
             "senses": ["keyPresses": keys.total, "listening": keys.isListening, "microphoneChecks": senses.microphoneChecks,
                        "microphone": Int(senses.lastMicrophone.inUse), "captureDevices": Int(senses.lastMicrophone.devices)],
             "usage": ["summary": usageText ?? "", "vigor": roster.vigor.rawValue],
+            "agents": ["inbox": AgentSignalInbox.homeFolder.path, "lastHost": agentHosts.lastLookup,
+                       "broughtForward": broughtForward.succeeded, "bringForwardAsked": broughtForward.asked],
             "drive": driver?.report ?? [:],
             "scene": probe?.report ?? [:],
             "settingsFile": WindowsPaths.settingsFile.path,

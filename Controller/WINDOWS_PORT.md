@@ -358,3 +358,12 @@
   - 실제 릴리스: 태그를 만들거나 `release-windows.yml`을 실행하면 올라간다. 그 전까지 `install.ps1` 한 줄은 404다. README의 윈도우 설치·상태줄 안내도 그때 넣는다.
   - 실제 PC 확인: SmartScreen·백신 반응(서명 없음, Raw Input), 배율 125·150%, 여러 모니터, 실제 마이크로 통화 중 조용히.
   - 실행 파일 아이콘(리소스), 일정 말풍선(보류).
+
+### 10.12 AI 작업 알림 연결 (2026-11-25)
+- 공통 코드(신호·받는 함·조율자·찾아가기)는 0efa51b에서 Core로 들어왔고, 윈도우는 껍데기 연결만 더함. 자세한 동작은 `DESKTOP_PET_CONTROLLER.md` 6.24 윈도우 항목.
+- **받는 함:** `AgentSignalInbox.start()`의 Foundation `Timer`는 이 메시지 루프에서 돌지 않음(사용량 파일과 같은 이유). 앱 틱이 0.1초마다 `check()`를 부름. 훅이 파일이 읽힐 때까지 기다리므로 맥(1초)보다 짧게.
+- **앱 찾기·배지·앞으로 (`Windows/App/WindowsAgentHosts.swift`):** toolhelp 부모 사슬 → 보이는 최상위 창을 가진 첫 프로세스, 창 아이콘 → 12px 도트, `SetForegroundWindow`.
+- **말풍선 (`BubblePainter`, `DeskPetText`):** `DPBubbleStyle.textInset`을 더해 글자를 배지만큼 오른쪽에 두고, 배지는 Swift에서 도트로 찍음.
+- **훅:** README에 윈도우용 줄을 따로 둠(`/proc/$$/winpid` + 최대 0.3초 기다림). Claude Code가 윈도우에서 훅을 Git Bash로 돌린다는 전제(실제 PC에서 확인 필요).
+- **뺀 것:** 작업 표시줄 단추 자리(UI Automation). COM 코드가 커지고 단추 순서·겹침 처리가 불안정해 이번에는 창 도약만. 메뉴 문구도 아직 필요 없음.
+- **CI:** 훅 줄 단독 시험(Git Bash, DeskPet 꺼짐) + 연기 시험 중 훅 한 번(DeskPet이 파일을 가져감) + 메모장 아래 숨은 자식 신호 → 부모 찾기·아이콘 ✋·누르면 메모장 앞으로. 연기 시험은 32초로 늘림.

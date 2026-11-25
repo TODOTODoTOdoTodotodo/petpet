@@ -23,6 +23,8 @@ typedef struct {
     uint32_t ink;
     /// DIP 하나의 픽셀 수 (화면 배율)
     float scale;
+    /// 글자 왼쪽에 비워 둘 너비 (앱 아이콘 배지 자리). 글자는 나머지 너비의 가운데
+    float textInset;
 } DPBubbleStyle;
 
 /// 미리 곱한 BGRA 그림 (위쪽 줄부터). dp_image_free로 돌려줌

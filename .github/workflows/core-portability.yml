@@ -32,7 +32,43 @@ jobs:
       - name: Checks
         shell: bash
         run: scripts/verify.sh
-      # 연기 시험: 메모장을 띄우고 DeskPet.exe를 22초 돌려, 모니터·창 목록·펫·트레이·그린 픽셀·장식·입력을 확인하고 화면을 캡처함
+      # AI 작업 알림 훅(README 윈도우 줄과 같은 명령): Git Bash가 자기 윈도우 PID를 적고, 파일이 읽힐 때까지(최대 약 0.3초)
+      # 살아 있어야 DeskPet이 그 PID에서 부모를 따라 올라갈 수 있음. DeskPet이 꺼져 있으므로 기다림이 끝나고 파일은 남음
+      - name: AI alert hook (Git Bash)
+        shell: pwsh
+        timeout-minutes: 2
+        run: |
+          $bash = Join-Path $env:ProgramFiles 'Git\bin\bash.exe'
+          $signals = Join-Path $env:USERPROFILE '.deskpet\signals'
+          Remove-Item "$signals\*" -Force -ErrorAction SilentlyContinue
+          $hook = 'mkdir -p ~/.deskpet/signals && read w < /proc/$$/winpid && f=~/.deskpet/signals/$$ && printf ''{"kind":"working","source":"claude","pid":%s}'' $w > $f.tmp && mv $f.tmp $f.json && for i in 1 2 3; do [ -e $f.json ] || break; sleep 0.1; done'
+          $info = [System.Diagnostics.ProcessStartInfo]::new($bash)
+          $info.ArgumentList.Add('-c')
+          $info.ArgumentList.Add($hook)
+          $info.UseShellExecute = $false
+          $clock = [System.Diagnostics.Stopwatch]::StartNew()
+          $bashProcess = [System.Diagnostics.Process]::Start($info)
+          $seen = $null
+          while (-not $bashProcess.HasExited) {
+            $file = Get-ChildItem $signals -Filter *.json -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($file -and -not $seen) {
+              $signal = Get-Content $file.FullName -Raw | ConvertFrom-Json
+              $seen = Get-Process -Id $signal.pid -ErrorAction SilentlyContinue
+              Write-Host "signal: $(Get-Content $file.FullName -Raw), process: $($seen.ProcessName)"
+            }
+            Start-Sleep -Milliseconds 15
+          }
+          $clock.Stop()
+          if ($bashProcess.ExitCode -ne 0) { throw "hook exited with $($bashProcess.ExitCode)" }
+          $file = Get-ChildItem $signals -Filter *.json | Select-Object -First 1
+          if (-not $file) { throw "hook wrote no signal file" }
+          $signal = Get-Content $file.FullName -Raw | ConvertFrom-Json
+          if ($signal.kind -ne 'working' -or $signal.source -ne 'claude') { throw "unexpected signal: $(Get-Content $file.FullName -Raw)" }
+          if (-not $seen) { throw "pid $($signal.pid) was not a live Windows process while the hook waited" }
+          if ($seen.ProcessName -ne 'bash') { throw "pid $($signal.pid) is $($seen.ProcessName), expected bash" }
+          Write-Host "hook took $($clock.ElapsedMilliseconds) ms with DeskPet closed"
+          Remove-Item "$signals\*" -Force
+      # 연기 시험: 메모장을 띄우고 DeskPet.exe를 32초 돌려, 모니터·창 목록·펫·트레이·그린 픽셀·장식·입력을 확인하고 화면을 캡처함
       - name: Smoke test (DeskPet.exe)
         shell: pwsh
         timeout-minutes: 3
@@ -46,15 +82,31 @@ jobs:
           Set-Content "$env:DESKPET_DATA_DIR\claude-usage.json" "{`"five_hour`":{`"used_percentage`":85,`"resets_at`":$resets}}"
           Start-Process notepad
           Start-Sleep -Seconds 3
-          $seconds = 22
+          $seconds = 32
           $app = Start-Process -FilePath "$bin\DeskPet.exe" -ArgumentList '--smoke', "$seconds", '--drive', '--scene', '--report', 'smoke.json' -PassThru -NoNewWindow
           # --drive: 펫이 올라탄 창을 앱이 조금씩 옮기고, 실제 입력(SendInput)으로 펫을 끌어 던지고·찌르고·우클릭 메뉴를 열었다 닫음
-          # --scene: 그 뒤 모자·든 물건·이모지 말풍선을 두고, 무기를 던지고, 물건을 떨어뜨려 클릭하고, 입력 창으로 이름을 지음
+          # --scene: 그 뒤 모자·든 물건·이모지 말풍선을 두고, 무기를 던지고, 물건을 떨어뜨려 클릭하고, 입력 창으로 이름을 지음.
+          #          끝으로 메모장 아래 숨은 자식의 기다림 신호 → 메모장 아이콘 ✋ → 메모장을 내리고 펫을 눌러 다시 앞으로
+          # 첫 캡처 때 README 훅을 한 번 돌려, 켜진 DeskPet이 신호 파일을 곧바로 가져가 훅이 빨리 끝나는지 봄
+          $bash = Join-Path $env:ProgramFiles 'Git\bin\bash.exe'
+          $hook = 'mkdir -p ~/.deskpet/signals && read w < /proc/$$/winpid && f=~/.deskpet/signals/$$ && printf ''{"kind":"working","source":"claude","pid":%s}'' $w > $f.tmp && mv $f.tmp $f.json && for i in 1 2 3; do [ -e $f.json ] || break; sleep 0.1; done'
+          $hookLeft = $null
           # 3초마다 화면 캡처 (DWM이 합성한 화면이라 레이어드 창도 찍힘). 캡처가 안 돼도 판정은 보고서로 함
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing
           $shots = 0
-          while (-not $app.HasExited -and $shots -lt 8) {
+          while (-not $app.HasExited -and $shots -lt 10) {
             Start-Sleep -Seconds 3
+            if ($null -eq $hookLeft) {
+              $clock = [System.Diagnostics.Stopwatch]::StartNew()
+              $info = [System.Diagnostics.ProcessStartInfo]::new($bash)
+              $info.ArgumentList.Add('-c')
+              $info.ArgumentList.Add($hook)
+              $info.UseShellExecute = $false
+              [System.Diagnostics.Process]::Start($info).WaitForExit()
+              $clock.Stop()
+              $hookLeft = @(Get-ChildItem (Join-Path $env:USERPROFILE '.deskpet\signals') -Filter *.json -ErrorAction SilentlyContinue).Count
+              Write-Host "hook with DeskPet running: $($clock.ElapsedMilliseconds) ms, files left: $hookLeft"
+            }
             try {
               $screen = [System.Windows.Forms.SystemInformation]::VirtualScreen
               $shot = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
@@ -107,6 +159,18 @@ jobs:
           if (-not $s.promptOpened) { throw "naming prompt did not open" }
           if (-not $s.renamed) { throw "pet was not renamed through the prompt" }
           if ($s.finishedSteps -ne $s.totalSteps) { throw "scene probe stopped at step $($s.finishedSteps)/$($s.totalSteps)" }
+          # AI 작업 알림: 받는 함이 훅 파일을 가져가고, 숨은 자식에서 메모장을 찾아 아이콘 ✋, 펫을 누르면 메모장이 앞으로
+          $a = $r.agents
+          Write-Host "agents: $($a | ConvertTo-Json -Compress), scene: notice $($s.agentNotice) badge $($s.agentBadge) app $($s.agentApp) host $($s.agentHostPID) signal $($s.agentSignalPID)"
+          if ($hookLeft -ne 0) { throw "running DeskPet left $hookLeft hook signal files" }
+          if ($s.agentNotice -ne '✋') { throw "no pet held the waiting signal: '$($s.agentNotice)'" }
+          if ($s.agentApp -ne $s.agentHostPID) { throw "bubble app $($s.agentApp) is not notepad $($s.agentHostPID)" }
+          if ($s.agentSignalPID -eq $s.agentHostPID) { throw "signal came from notepad itself; the parent walk was not tried" }
+          if ($a.lastHost.depth -lt 1) { throw "host was not found through a parent: $($a.lastHost | ConvertTo-Json -Compress)" }
+          if (-not $s.agentBadge) { throw "waiting bubble has no app icon" }
+          if ($r.stage.bubblesBadged -lt 1) { throw "no bubble was drawn with an app icon" }
+          if (-not $s.agentForeground) { throw "poking the pet did not bring notepad forward (cleared: $($s.agentCleared))" }
+          if ($a.broughtForward -lt 1) { throw "SetForegroundWindow never succeeded ($($a.bringForwardAsked) asked)" }
           # 4단계: 키 누른 수(내용 없이), 마이크 확인(WASAPI), Claude 사용량, 펫 트레이 아이콘
           $senses = $r.senses
           Write-Host "senses: $($senses | ConvertTo-Json -Compress), usage: $($r.usage | ConvertTo-Json -Compress)"
