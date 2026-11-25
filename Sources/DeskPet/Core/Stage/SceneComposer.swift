@@ -31,13 +31,15 @@ final class SceneComposer<Frame> {
         }
     }
 
-    /// discreet: 통화 중이라 일정 제목을 숨길지. 한 번 부를 때마다 1/60초가 흐른 것으로 봄
-    func compose(_ pets: [Pet], projectiles: [Projectile] = [], items: [DroppedItem] = [], discreet: Bool = false) -> Scene<Frame> {
+    /// notes: 구겨 던진 알림 더미 (물건처럼 그림). discreet: 통화 중이라 일정 제목을 숨기고 말풍선을 키우지 않을지.
+    /// 한 번 부를 때마다 1/60초가 흐른 것으로 봄
+    func compose(_ pets: [Pet], projectiles: [Projectile] = [], items: [DroppedItem] = [], notes: [CrumpledNotice] = [],
+                 discreet: Bool = false) -> Scene<Frame> {
         clock += 1.0 / 60
         return Scene(
             pets: pets.compactMap { drawing(of: $0, discreet: discreet) },
             projectiles: projectiles.map(ProjectileDrawing.init),
-            items: items.filter(\.isOnScreen).map { ItemDrawing($0, clock: clock) }
+            items: items.filter(\.isOnScreen).map { ItemDrawing($0, clock: clock) } + notes.map(ItemDrawing.init)
         )
     }
 

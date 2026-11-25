@@ -103,6 +103,7 @@ final class WindowsApp {
 
         roster.onEvent = log
         roster.agents.onEvent = log
+        roster.notices.onEvent = log
         roster.agents.onBringForward = { [unowned self] app in
             let done = self.agentHosts.bringForward(app)
             self.broughtForward.asked += 1

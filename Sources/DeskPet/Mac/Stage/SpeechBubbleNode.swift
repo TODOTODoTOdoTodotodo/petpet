@@ -2,8 +2,8 @@ import AppKit
 import SpriteKit
 
 /// This object is responsible for drawing one rounded speech bubble with a tail pointing at its pet,
-/// with an optional dot badge (the app icon of an AI signal) before the text,
-/// redrawing its shape only when the text, kind or badge changes.
+/// with an optional dot badge (the app icon of an AI signal) before the text, scaled up from the tail tip as a notice
+/// is left unanswered, redrawing its shape only when the text, kind or badge changes.
 final class SpeechBubbleNode: SKNode {
     private let body = SKShapeNode()
     /// 꼬리는 채움과 테두리를 나눠, 몸통 테두리가 꼬리 이음새에 비치지 않게 함
@@ -55,6 +55,7 @@ final class SpeechBubbleNode: SKNode {
 
     /// 말풍선 내용 갱신 (같으면 다시 그리지 않음)
     func show(_ speech: Speech) {
+        if xScale != speech.swell { setScale(speech.swell) }
         if let shown, shown.text == speech.text, shown.kind == speech.kind, shown.badge == speech.badge?.id { return }
         shown = (speech.text, speech.kind, speech.badge?.id)
 
@@ -94,12 +95,14 @@ final class SpeechBubbleNode: SKNode {
 
     /// 꼬리가 가리킬 지점(펫 머리 위)과, 말풍선이 들어가야 할 화면 가로 범위
     func place(pointingAt anchor: CGPoint, within bounds: ClosedRange<CGFloat>) {
-        let half = bubbleSize.width / 2
+        // 커진 알림은 꼬리 끝을 기준으로 노드 배율만 키움 (자리 계산은 커진 크기로)
+        let swell = xScale
+        let half = bubbleSize.width * swell / 2
         let lowest = bounds.lowerBound + half + 2
         let highest = bounds.upperBound - half - 2
         let centerX = lowest <= highest ? min(max(anchor.x, lowest), highest) : anchor.x
-        position = CGPoint(x: centerX, y: anchor.y + tailHeight)
-        tail.position = CGPoint(x: min(max(anchor.x - centerX, -half + 10), half - 10), y: 0.5)
+        position = CGPoint(x: centerX, y: anchor.y + tailHeight * swell)
+        tail.position = CGPoint(x: min(max(anchor.x - centerX, -half + 10 * swell), half - 10 * swell) / swell, y: 0.5)
     }
 
     /// 아이콘 픽셀 → 흐리지 않게 키우는 텍스처 (같은 아이콘은 한 번만 만듦)

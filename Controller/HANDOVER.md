@@ -73,7 +73,7 @@ private/
 │   │   ├── Pet/
 │   │   │   ├── Pet.swift              # 펫 몸(발 위치·방향·딛는 면), 현재 행동, 말풍선, 클릭·알림 수신
 │   │   │   ├── PetBehavior.swift      # 행동 프로토콜(클릭·알림 반응 포함), 땅 위 공통 반응, 물리 상수
-│   │   │   ├── Behaviors/             # Idle, Walk, Climb, Airborne, Act, Dragged, Sleep, Glance(인사·돌아보기·구경), SkillLeap, Peek(최대화 창 거꾸로 빼꼼), ScreenHop(모니터 건너가기), Pounce·Throw(포인터에 뛰어오르기·무기 던지기, 정확도는 ThrowAim), CeilingWalk(창 아랫면 거꾸로 다니기), Tower(탑 맨 아래·머리로 뛰기·머리 위에 서기), Challenge(길 막은 펫에게 ⚔️ 결투 걸기), Entrance(메뉴바 밑에서 보는 창 위로 등장), Drumming(타이핑 따라 두드리기), Train(기관차·뒤 칸), CursorCarry(포인터 들고 달아나기), Fetch(물건 주우러 가기), Spin(Lv.2 한 바퀴), Visit(끝난 앱의 Dock 아이콘으로 가서 두드리기)
+│   │   │   ├── Behaviors/             # Idle, Walk, Climb, Airborne, Act, Dragged, Sleep, Glance(인사·돌아보기·구경), SkillLeap, Peek(최대화 창 거꾸로 빼꼼), ScreenHop(모니터 건너가기), Pounce·Throw(포인터에 뛰어오르기·무기 던지기, 정확도는 ThrowAim), CeilingWalk(창 아랫면 거꾸로 다니기), Tower(탑 맨 아래·머리로 뛰기·머리 위에 서기), Challenge(길 막은 펫에게 ⚔️ 결투 걸기), Entrance(메뉴바 밑에서 보는 창 위로 등장), Drumming(타이핑 따라 두드리기), Train(기관차·뒤 칸), CursorCarry(포인터 들고 달아나기), Fetch(물건 주우러 가기), Spin(Lv.2 한 바퀴), Visit(끝난 앱의 Dock 아이콘으로 가서 두드리기), TossNotice(오래 둔 알림 구겨 던지기)
 │   │   │   ├── BehaviorPlanner.swift  # 다음 행동 선택(잠, 커서·친구 따라가기 포함), 등반 판단
 │   │   │   ├── PetRoster.swift        # 펫 목록 소유, 진행, 일정마다 펫 배정(전령 등장·퇴장), 화면 밖 펫 복귀
 │   │   │   ├── PetSocialCoordinator.swift # 펫끼리 마주치면 인사, 티격태격 대결(25%), 또는 올라타기 (짝별 20초 간격)
@@ -94,6 +94,7 @@ private/
 │   │   │   ├── Vigor.swift            # Claude 사용량 → 기력 단계와 행동 배율
 │   │   │   ├── LeapPlanner.swift      # 창 윗변에 올라서기·빼꼼 도약 속도 계산 (순수 계산)
 │   │   │   ├── Speech.swift           # 말풍선(잡담·알림)·앱 아이콘 배지(SpeechBadge)와 반응 문구
+│   │   │   ├── NoticePileCoordinator.swift # 오래 둔 알림을 구겨 바닥 끝 더미로(CrumpledNotice), 누르면 다시 알림, 거두면 치움
 │   │   │   ├── AgentSignalCoordinator.swift # AI 신호 → 앱 아이콘 말풍선(끝남 ✅·기다림 ✋·한도 💤), 끝난 앱 Dock 아이콘·창 찾아가기, ✋ 거두기, 클릭 시 앱 앞으로
 │   │   │   └── RandomSource.swift     # 난수 주입 (검증용 고정 시드)
 │   │   ├── Collection/
@@ -216,6 +217,7 @@ private/
 * 앱을 다시 빌드하면(임시 서명이라 macOS가 새 앱으로 봄) 캘린더 접근을 다시 묻는다. 설치한 DMG를 계속 쓰면 처음 한 번만 묻는다.
 * 알림을 띄울 때 로그(`📅 queued notice`)에 일정 제목이 함께 남는다.
 * 통화 중(마이크 사용 중)에는 일정 말풍선이 제목 없이 보인다. 메뉴 **Quiet During Calls**로 끌 수 있다.
+* 확인하지 않은 알림(일정·AI ✋)은 사용자가 자리에 있는 동안만 나이를 센다. 든 펫은 분주해지고(종종걸음·두리번·깡충), 말풍선은 5분 1.15배·15분 1.3배로 커진다. 30분이면 펫이 구겨 모니터 바닥 끝 더미로 던지고(로그 `🗞️ ... tossed notice`), 뭉치를 누르면 다시 알린다(`📜 reopened`). 메뉴 **Toss Old Notices**(이슈 #5).
 
 ### 캐릭터 고르기 참고
 * 펫을 **우클릭**(또는 control 클릭)하면 그 펫의 캐릭터를 바꾸거나 뺄 수 있다(`PetLineup`).

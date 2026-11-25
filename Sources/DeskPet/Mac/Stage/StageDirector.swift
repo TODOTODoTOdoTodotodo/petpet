@@ -19,9 +19,10 @@ final class StageDirector: PetStage {
         stages.forEach { $0.setOpacity(opacity) }
     }
 
-    /// discreet: 통화 중이라 일정 제목을 숨길지
-    func render(_ pets: [Pet], projectiles: [Projectile] = [], items: [DroppedItem] = [], discreet: Bool = false) {
-        let scene = composer.compose(pets, projectiles: projectiles, items: items, discreet: discreet)
+    /// notes: 구겨 던진 알림 더미. discreet: 통화 중이라 일정 제목을 숨길지
+    func render(_ pets: [Pet], projectiles: [Projectile] = [], items: [DroppedItem] = [], notes: [CrumpledNotice] = [],
+                discreet: Bool = false) {
+        let scene = composer.compose(pets, projectiles: projectiles, items: items, notes: notes, discreet: discreet)
         stages.forEach { $0.render(scene.pets, projectiles: scene.projectiles, items: scene.items) }
     }
 

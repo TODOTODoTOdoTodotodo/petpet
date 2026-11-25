@@ -127,7 +127,7 @@
 ### 6.1 말풍선 (`Speech`)
 - 펫마다 말풍선 하나. 종류는 두 가지:
   - **잡담(chatter)**: 반응용 짧은 기호(♥, 💢, !, …, Zzz, 👋). 몇 초 뒤 사라짐.
-  - **알림(notice)**: 일정 안내. **사용자가 펫을 클릭해 확인할 때까지 유지**, 잡담이 덮어쓰지 못함.
+  - **알림(notice)**: 일정 안내. **사용자가 펫을 클릭해 확인할 때까지 유지**, 잡담이 덮어쓰지 못함. 오래 두면 커지고 결국 더미로 던짐(6.25).
 - 문구는 짧은 명사형만 쓴다(예: `10분 뒤 · 주간 회의`). LLM 생성 없이 정해진 틀로 만든다.
 - 말풍선은 펫 머리 위에 그리고, 모니터 밖으로 나가지 않게 가로 위치를 당긴다.
 
@@ -574,6 +574,20 @@
   - 작업 표시줄 아이콘 찾아가기는 이번에 뺌(`supportsDockVisits` 기본 false라 메뉴에도 안 보임). 끝나면 그 앱 창으로 도약.
   - 훅 PID: Git Bash의 `$PPID`는 윈도우 번호가 아님(부모가 MSYS가 아니면 1). README 윈도우 줄은 `/proc/$$/winpid`(곧 끝나는 bash 자신)를 적고, 파일이 사라질 때까지 0.1초씩 최대 세 번 기다림. 그동안 DeskPet이 bash에서 부모를 따라 올라감. DeskPet이 꺼져 있으면 약 0.3초 늦어질 뿐.
   - CI: 훅 줄을 Git Bash로 돌려 bash의 윈도우 번호가 기다리는 동안 살아 있는지, 켜진 DeskPet이 파일을 가져가는지 확인. 연기 시험은 메모장 아래에 숨은 자식(ping)을 띄우고 그 번호로 기다림 신호를 넣어, 부모를 따라 메모장을 찾고 메모장 아이콘 ✋가 그려지는지, 메모장을 내린 뒤 펫을 누르면 다시 맨 앞으로 오는지 봄.
+
+### 6.25 오래 둔 알림: 분주·커짐·구겨 던지기 (`Speech.age`, `NoticePileCoordinator`, `CrumpledNotice`, `TossNoticeBehavior`, 2026-11-25 추가, 이슈 #5)
+- **나이**: 알림 말풍선(`Speech.age`)은 사용자가 자리에 있을 때(입력 60초 안, `Speech.presenceLimit`)만 나이를 셈. 자리를 비운 동안 쌓인 알림은 재촉하지 않음.
+- **분주**: 알림을 든 펫은 쉬고 나서 75%로 분주한 동작(`BehaviorPlanner.busy`): 종종걸음으로 반대쪽 오가기(`pacing`, 걷기 1.4배, 0.6~1.4초) 5, 두리번(`fidgeting`) 3, 제자리 깡충(`fidgetHop`) 2. 포인터·창 쫓기보다 먼저.
+- **커짐**: `Speech.swell` 5분 1.15배, 15분 1.3배에서 멈춤. 잡담과 통화 중(`discreet`) 말풍선은 1배. 맥은 `SpeechBubbleNode`를 꼬리 끝 기준으로 노드 배율만 키우고, 윈도우는 `BubblePainter`가 커진 배율로 다시 그림(흐리지 않음). 자리 계산은 `SpeechBubbleLayout.place(swell:)`(몸통은 커진 크기, 꼬리 거리는 원래 크기 기준).
+- **구겨 던지기**: 30분(`NoticePileCoordinator.defaultTossAfter`) 지난 알림을 든 펫이 바닥에서 쉬거나 걸을 때 `TossNoticeBehavior`로 더미 쪽을 보고 0.35초에 손을 놓음(동작 프레임이 있으면 그것으로). 그 순간 `Pet.crumpleNotice()`가 말풍선을 닫고 💨, 알림 내용(`Speech.notice` → `ScheduleNotice`)을 넘김. 손을 놓기 전에 누르면 평소처럼 확인으로 닫히고 아무것도 던지지 않음.
+  - 통화 중·메뉴로 끈 경우·자리를 비운 동안에는 던지지 않음.
+  - 전령은 던진 뒤 💨가 사라지면 떠남(`hasDelivered`).
+- **더미** (`CrumpledNotice`): 손에서 0.7초 포물선으로 날아가 그 펫 모니터의 바닥 끝에 놓임. 쪽은 첫 뭉치를 던진 펫에게 가까운 끝으로 정해 유지. 아랫줄 4·3·2·1개로 반 칸씩 안쪽에 얹혀 쌓이고(모니터당 10개), 넘치면 가장 오래된 뭉치를 치움. 사라진 모니터의 뭉치는 첫 모니터로.
+  - 그림은 물건과 같은 `ItemDrawing`(`ItemKind.crumpledNotice`, 8×8 종이 뭉치, 도감에 들지 않음). 무대 계약 `PetStage.render(notes:)`로 넘기고, 놓인 뭉치 위에서는 마우스를 받음(`PetRoster.hasItem(at:)`).
+  - 뭉치를 누르면 `PetRoster.fetch(itemAt:)`가 더미에서 꺼내 `announce`로 다시 맡김(나이 0부터).
+  - 같은 주제가 새로 오거나(`announce`) 거둬지면(`withdraw`, ✋를 그 앱으로 돌아가 닫음 등) 더미에서도 치움. `holds(topic:)`는 더미도 셈.
+- 메뉴 **Toss Old Notices / 오래 둔 알림 던지기**(기본 켜짐). 끄면 던지지 않고, 커짐·분주는 그대로.
+- 검사: `NoticePileChecks`(커짐 단계·자리 비움·분주·던지기·통화 중·끔·좌우 더미·다시 띄우기·거두기·던지기 전 클릭·전령·더미 자리와 상한).
 
 ## 7. 스킨
 - 스킨은 `PetSkin<Frame>`: 프레임 목록·애니메이션 선택은 공통 코드, 그림 형식(`Frame`)과 PNG 읽기는 플랫폼이 정한다. 맥은 `MacSkin = PetSkin<SKTexture>`, `MacSpriteLoader`가 텍스처와 RGBA 픽셀(`SpritePixels`, 위쪽 줄부터)을 넘긴다.

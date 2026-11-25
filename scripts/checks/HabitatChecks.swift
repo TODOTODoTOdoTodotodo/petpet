@@ -159,7 +159,7 @@ final class RecordingStage: PetStage {
 
     func rebuild(for areas: [ScreenArea]) { rebuilds += 1 }
 
-    func render(_ pets: [Pet], projectiles: [Projectile], items: [DroppedItem], discreet: Bool) { renders += 1 }
+    func render(_ pets: [Pet], projectiles: [Projectile], items: [DroppedItem], notes: [CrumpledNotice], discreet: Bool) { renders += 1 }
 
     func routeMouse(at cursor: CGPoint, toPets wantsMouse: Bool) { self.wantsMouse = wantsMouse }
 }

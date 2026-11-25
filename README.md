@@ -183,6 +183,7 @@ irm https://github.com/TODOTODoTOdoTodotodo/petpet/releases/latest/download/inst
 | 불투명도 | 100% / 75% / 50% | 100% |
 | 일정 말풍선 | 캘린더·미리 알림 말풍선 | 켬 |
 | 일정 제목 숨김 | 말풍선에 시각만 표시 | 끔 |
+| 오래 둔 알림 던지기 | 30분 확인하지 않은 알림을 펫이 구겨 바닥 끝에 쌓음, 누르면 다시 알림 | 켬 |
 | 언어 · Language | 한국어 / English | 맥 언어 |
 
 ## 권한과 개인정보

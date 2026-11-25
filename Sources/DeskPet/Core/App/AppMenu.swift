@@ -53,6 +53,7 @@ final class AppMenu {
         roster.typing.isEnabled = settings.typingReactionsEnabled
         roster.pranks.isEnabled = settings.cursorPranksEnabled
         roster.agents.isEnabled = settings.agentSignalsEnabled
+        roster.notices.isEnabled = settings.tossesOldNotices
         roster.aim.accuracy = settings.throwAccuracy
     }
 
@@ -95,6 +96,7 @@ final class AppMenu {
             .separator,
             .command(text(.scheduleBubbles), .toggle(.schedules), checked: settings.schedulesEnabled),
             .command(text(.hideScheduleTitles), .toggle(.scheduleTitles), checked: settings.hidesScheduleTitles),
+            .command(text(.tossNotices), .toggle(.tossNotices), checked: settings.tossesOldNotices),
         ]
         if settings.schedulesEnabled && host?.calendarAccessDenied == true {
             nodes.append(.command(text(.allowCalendarAccess), .platform(.allowCalendarAccess)))
@@ -177,6 +179,9 @@ final class AppMenu {
             roster.agents.isEnabled = settings.agentSignalsEnabled
         case .dockVisits:
             settings.visitsDockIcons.toggle()
+        case .tossNotices:
+            settings.tossesOldNotices.toggle()
+            roster.notices.isEnabled = settings.tossesOldNotices
         case .schedules:
             settings.schedulesEnabled.toggle()
         case .scheduleTitles:

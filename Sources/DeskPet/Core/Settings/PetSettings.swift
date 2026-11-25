@@ -77,6 +77,12 @@ final class PetSettings {
         set { store.set(flag: newValue, forKey: "agentSignalsEnabled") }
     }
 
+    /// 오래 확인하지 않은 알림을 펫이 구겨 바닥 더미에 던짐 (누르면 다시 띄움, 기본 켜짐)
+    var tossesOldNotices: Bool {
+        get { store.flag(forKey: "tossesOldNotices") ?? true }
+        set { store.set(flag: newValue, forKey: "tossesOldNotices") }
+    }
+
     /// AI 작업이 끝나면 펫이 그 앱의 Dock 아이콘으로 걸어감 (맥은 손쉬운 사용 권한 필요, 기본 꺼짐)
     var visitsDockIcons: Bool {
         get { store.flag(forKey: "visitsDockIcons") ?? false }

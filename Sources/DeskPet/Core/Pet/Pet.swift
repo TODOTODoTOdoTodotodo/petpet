@@ -195,6 +195,7 @@ final class Pet {
         animationElapsed += dt * behavior.animationSpeed
         if var current = speech {
             current.remaining -= dt
+            if context.idleSeconds < Speech.presenceLimit { current.age += dt }
             speech = current.remaining > 0 ? current : nil
         }
         if let next = behavior.step(self, in: world, context: context, dt: dt) {
@@ -269,6 +270,15 @@ final class Pet {
             hasDelivered = true
             say(Chatter.hello, for: 1.2)
         }
+    }
+
+    /// 오래 둔 알림을 구겨 버림: 말풍선을 닫고 그 알림을 돌려줌 (더미에 남기기 위함). 전령은 이걸로 할 일을 마침
+    func crumpleNotice() -> ScheduleNotice? {
+        guard let notice = speech?.notice else { return nil }
+        clearSpeech()
+        if role == .messenger { hasDelivered = true }
+        say(Chatter.tossed, for: 1.0)
+        return notice
     }
 
     /// 일정 알림. 확인할 때까지 유지. 서 있으면 정면을 보고 잠시 멈추고, 자고 있었으면 깸

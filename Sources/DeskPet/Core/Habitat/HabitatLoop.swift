@@ -2,7 +2,7 @@ import Foundation
 
 /// This object is responsible for running the desktop pet simulation on one steady clock, in a fixed order:
 /// refreshing the world from the desktop (faster while windows move), stepping the pets, drawing them,
-/// and letting only the stage under a grabbable pet or item take the mouse.
+/// and letting only the stage under a grabbable pet or item (a crumpled notice included) take the mouse.
 /// The platform shell only drives `tick(now:)` from its 60Hz timer and supplies the host contracts.
 final class HabitatLoop {
     let world = World()
@@ -81,8 +81,9 @@ final class HabitatLoop {
         let cursor = senses.cursor
         roster.step(dt: dt, in: world, cursor: cursor, idleSeconds: senses.secondsSinceUserInput(), keyPresses: senses.newKeyPresses())
         if let held = roster.heldCursor { senses.moveCursor(to: held) }
-        stage.render(roster.pets, projectiles: roster.projectiles, items: roster.finding.items, discreet: roster.isQuiet)
-        let grabbable = gesture.isHolding || roster.pet(at: cursor) != nil || roster.finding.item(at: cursor) != nil
+        stage.render(roster.pets, projectiles: roster.projectiles, items: roster.finding.items, notes: roster.notices.crumples,
+                     discreet: roster.isQuiet)
+        let grabbable = gesture.isHolding || roster.pet(at: cursor) != nil || roster.hasItem(at: cursor)
         stage.routeMouse(at: cursor, toPets: grabbable)
     }
 }

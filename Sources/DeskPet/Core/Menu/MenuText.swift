@@ -29,7 +29,7 @@ enum MenuText: CaseIterable {
     case chase, chaseActiveWindow, chasePointer, chaseNothing
     case skillJumps, followDisplay, quietDuringCalls, tireWithUsage, agentSignals, dockVisits, reactToTyping, pointerPranks, breakReminders
     case petSize, opacity
-    case scheduleBubbles, hideScheduleTitles, allowCalendarAccess
+    case scheduleBubbles, hideScheduleTitles, tossNotices, allowCalendarAccess
     case openDebugLog, quit
     case usageNone, usageReset
     case pets, addPet, addAnotherPet, removePet, allPetsAs, removeThisPet
@@ -103,6 +103,7 @@ enum MenuText: CaseIterable {
         case .opacity: ("Opacity", "불투명도")
         case .scheduleBubbles: ("Schedule Bubbles", "일정 말풍선")
         case .hideScheduleTitles: ("Hide Schedule Titles", "일정 제목 숨김")
+        case .tossNotices: ("Toss Old Notices", "오래 둔 알림 던지기")
         case .allowCalendarAccess: ("Allow Calendar Access…", "캘린더 접근 허용…")
         case .openDebugLog: ("Open Debug Log", "디버그 로그 열기")
         case .quit: ("Quit DeskPet", "DeskPet 종료")

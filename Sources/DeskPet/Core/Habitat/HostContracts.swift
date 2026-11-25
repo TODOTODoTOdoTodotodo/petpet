@@ -21,8 +21,8 @@ protocol HostSenses: AnyObject {
 protocol PetStage: AnyObject {
     /// 모니터 구성이 바뀌면 무대를 다시 만듦
     func rebuild(for areas: [ScreenArea])
-    /// discreet: 통화 중이라 일정 제목을 숨길지
-    func render(_ pets: [Pet], projectiles: [Projectile], items: [DroppedItem], discreet: Bool)
+    /// notes: 구겨 던진 알림 더미. discreet: 통화 중이라 일정 제목을 숨길지
+    func render(_ pets: [Pet], projectiles: [Projectile], items: [DroppedItem], notes: [CrumpledNotice], discreet: Bool)
     /// 커서가 있는 무대만, 잡을 것이 있을 때 마우스를 받음
     func routeMouse(at cursor: CGPoint, toPets wantsMouse: Bool)
 }

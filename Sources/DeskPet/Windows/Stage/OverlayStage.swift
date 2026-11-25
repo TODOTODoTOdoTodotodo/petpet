@@ -32,13 +32,14 @@ final class OverlayStage: PetStage {
         }
     }
 
-    func render(_ pets: [Pet], projectiles: [Projectile], items: [DroppedItem], discreet: Bool) {
-        let scene = composer.compose(pets, projectiles: projectiles, items: items, discreet: discreet)
+    func render(_ pets: [Pet], projectiles: [Projectile], items: [DroppedItem], notes: [CrumpledNotice], discreet: Bool) {
+        let scene = composer.compose(pets, projectiles: projectiles, items: items, notes: notes, discreet: discreet)
         effects.step(scene)
         lastDrawings = scene.pets.count
         let sparks = effects.sparks
         // 레이어드 창은 투명 픽셀의 클릭을 넘기므로, 다리 사이처럼 빈 곳도 잡히게 잡기 영역을 칠함 (맥 무대와 같은 판정)
         let grabAreas = pets.filter(\.isTangible).map(\.grabRect).filter { !$0.isNull } + items.filter(\.isResting).map(\.hitRect)
+            + notes.filter { !$0.isFlying }.map(\.hitRect)
         for (area, overlay) in screens {
             var layers = Layers(stage: self, origin: overlay.origin, bounds: overlay.canvas.bounds)
             layers.sparks(sparks.filter { !$0.front })
@@ -217,10 +218,12 @@ final class OverlayStage: PetStage {
         mutating func bubble(_ pet: PetDrawing<WinSprite>, within bounds: ClosedRange<CGFloat>) {
             guard let speech = pet.speech, let size = stage.bubbles.bodySize(for: speech) else { return }
             let anchor = CGPoint(x: (pet.speechAnchor.x * unit).rounded() / unit, y: (pet.speechAnchor.y * unit).rounded() / unit)
-            let placed = SpeechBubbleLayout.place(body: size, pointingAt: anchor, within: bounds)
-            guard let picture = stage.bubbles.picture(for: speech, body: size, tailX: placed.tailX, scale: unit) else { return }
-            // 그림 왼쪽 위 = 몸통 왼쪽 위에서 1포인트 바깥
-            let corner = box(CGRect(x: placed.body.minX - 1, y: placed.body.maxY + 1, width: 0, height: 0))
+            // 오래 둔 알림은 커진 배율로 그대로 다시 그림 (늘리지 않아 흐리지 않음)
+            let swell = speech.swell
+            let placed = SpeechBubbleLayout.place(body: size, pointingAt: anchor, within: bounds, swell: swell)
+            guard let picture = stage.bubbles.picture(for: speech, body: size, tailX: placed.tailX, scale: unit * swell) else { return }
+            // 그림 왼쪽 위 = 몸통 왼쪽 위에서 1포인트(커진 배율) 바깥
+            let corner = box(CGRect(x: placed.body.minX - swell, y: placed.body.maxY + swell, width: 0, height: 0))
             add(OverlaySprite(image: picture, box: PixelBox(x: corner.x, y: corner.y, width: picture.width, height: picture.height)), as: "bubbles")
         }
     }

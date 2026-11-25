@@ -70,6 +70,10 @@ final class BehaviorPlanner {
             return ExhaustedBehavior()
         }
         let walkSpeed = PetPhysics.walkSpeed * vigor.speedFactor
+        // 알림을 든 펫은 확인받을 때까지 분주함 (쫓기보다 먼저)
+        if pet.isShowingNotice && random.chance(Self.busyChance) {
+            return busy(pet, in: world, walkSpeed: walkSpeed)
+        }
         if let pointer = context.pointer {
             if let cling = clingLeap(for: pet, to: context.clingTarget, in: world, context: context),
                random.chance(Self.pointerLeapChance) {
@@ -126,6 +130,27 @@ final class BehaviorPlanner {
             options.append((Self.clingWeight * vigor.leapFactor, { cling }))
         }
         return pick(options.filter { $0.weight > 0 })
+    }
+
+    /// 알림을 든 펫이 쉬고 나서 분주한 동작을 고를 확률
+    static let busyChance = 0.75
+
+    /// 알림을 든 펫의 분주한 동작: 종종걸음으로 오가기, 두리번, 제자리 깡충
+    private func busy(_ pet: Pet, in world: World, walkSpeed: CGFloat) -> PetBehavior {
+        var options: [(weight: Double, make: () -> PetBehavior)] = [
+            (5, {
+                // 방금 보던 반대쪽으로 짧게 오감 (화면 끝이면 안쪽으로)
+                let back = pet.facing.opposite
+                let open = world.contains(CGPoint(x: pet.position.x + back.sign * 60 * pet.motionScale, y: pet.position.y + 1))
+                return WalkBehavior(name: "pacing", direction: open ? back : pet.facing, speed: walkSpeed * 1.4,
+                                    duration: self.random.uniform(0.6, 1.4))
+            }),
+            (3, { IdleBehavior(duration: self.random.uniform(0.5, 1.0), lookAtUser: true, name: "fidgeting") }),
+        ]
+        if canJump(pet, in: world) {
+            options.append((2, { AirborneBehavior.hop(name: "fidgetHop", motionScale: pet.motionScale) }))
+        }
+        return pick(options)
     }
 
     /// 친밀도 레벨별 동작: Lv.2 한 바퀴(비중), Lv.3 공중제비(점프 중 확률)

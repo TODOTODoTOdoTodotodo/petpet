@@ -38,6 +38,7 @@ struct CheckRunner {
         StageArtChecks.run(check)
         ThrowAimChecks.run(check)
         AgentSignalChecks.run(check)
+        NoticePileChecks.run(check)
         HeadTrackerChecks.run(check, skinsDirectory: skins)
         AppMenuChecks.run(check, skinsDirectory: skins)
 

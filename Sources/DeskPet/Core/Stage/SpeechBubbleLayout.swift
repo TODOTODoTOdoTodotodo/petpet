@@ -38,12 +38,15 @@ enum SpeechBubbleLayout {
     }
 
     /// 몸통 사각형(전역 좌표)과 꼬리 끝의 몸통 왼쪽에서부터 가로 거리. 꼬리 끝은 anchor 바로 위
-    static func place(body size: CGSize, pointingAt anchor: CGPoint, within bounds: ClosedRange<CGFloat>) -> (body: CGRect, tailX: CGFloat) {
-        let half = size.width / 2
+    /// swell: 오래 둔 알림이 커진 배율. 몸통 사각형은 커진 크기, 꼬리 거리는 커지기 전 몸통 기준
+    static func place(body size: CGSize, pointingAt anchor: CGPoint, within bounds: ClosedRange<CGFloat>,
+                      swell: CGFloat = 1) -> (body: CGRect, tailX: CGFloat) {
+        let half = size.width * swell / 2
         let lowest = bounds.lowerBound + half + 2
         let highest = bounds.upperBound - half - 2
         let centerX = lowest <= highest ? min(max(anchor.x, lowest), highest) : anchor.x
-        let tail = min(max(anchor.x - centerX, -half + tailInset), half - tailInset)
-        return (CGRect(x: centerX - half, y: anchor.y + tailHeight, width: size.width, height: size.height), half + tail)
+        let tail = min(max(anchor.x - centerX, -half + tailInset * swell), half - tailInset * swell)
+        return (CGRect(x: centerX - half, y: anchor.y + tailHeight * swell, width: size.width * swell, height: size.height * swell),
+                (half + tail) / swell)
     }
 }

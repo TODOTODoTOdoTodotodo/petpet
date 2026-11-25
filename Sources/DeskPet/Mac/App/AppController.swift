@@ -54,6 +54,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         roster.rhythm.onEvent = { PetLogger.shared.log($0) }
         roster.finding.onEvent = { PetLogger.shared.log($0) }
         roster.agents.onEvent = { PetLogger.shared.log($0) }
+        roster.notices.onEvent = { PetLogger.shared.log($0) }
         roster.agents.onBringForward = { app in
             NSRunningApplication(processIdentifier: app)?.activate(options: [.activateAllWindows])
         }

@@ -86,4 +86,14 @@ struct ItemDrawing {
         sparkle = max(flash, rare)
         trail = item.kind.rarity == .rare && item.isFlying
     }
+
+    /// 구겨 던진 알림 뭉치
+    init(_ note: CrumpledNotice) {
+        id = note.id
+        kind = .crumpledNotice
+        rect = note.rect
+        alpha = 1
+        sparkle = 0
+        trail = false
+    }
 }

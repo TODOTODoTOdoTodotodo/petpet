@@ -2,7 +2,8 @@ import Foundation
 
 /// This object is responsible for the pets living on the desktop: adding, removing and restyling them,
 /// advancing each one through the world, letting them meet, giving every schedule notice its own pet
-/// (calling in messenger pets when the residents are busy) and every AI agent signal its bubble, reacting when the user switches windows,
+/// (calling in messenger pets when the residents are busy) and every AI agent signal its bubble, piling up notices left
+/// unanswered too long and announcing them again when clicked, reacting when the user switches windows,
 /// keeping quiet during calls, and dropping lost pets back onto the main display.
 /// Pets live here rather than in any display's scene, so display changes never lose them.
 final class PetRoster: NoticeBoard {
@@ -30,6 +31,8 @@ final class PetRoster: NoticeBoard {
     let pranks = CursorPrankCoordinator()
     /// AI 도구가 보낸 신호(끝남·기다림·한도)를 앱 아이콘 말풍선으로
     let agents = AgentSignalCoordinator()
+    /// 오래 확인하지 않은 알림을 구겨 던진 더미
+    let notices = NoticePileCoordinator()
     /// 사용 중에 가끔 떨어지는 물건과 줍기
     let finding: FindingCoordinator
     /// 펫이 겪은 일을 친밀도(❤️)·레벨로
@@ -208,12 +211,15 @@ final class PetRoster: NoticeBoard {
         stepProjectiles(dt: dt)
         affection.step(dt: dt, pets: pets, idleSeconds: idleSeconds)
         agents.step(pets: pets, world: world, board: self, planner: planner, quiet: isQuiet)
+        notices.step(dt: dt, pets: pets, world: world, quiet: isQuiet)
         dismissDeliveredMessengers()
         deliverPendingNotices(in: world)
     }
 
-    /// 일정 알림 접수. 같은 일정을 들고 있는 펫이 있으면 문구만 바꾸고, 아니면 다음 틱에 전할 펫을 정함
+    /// 일정 알림 접수. 같은 일정을 들고 있는 펫이 있으면 문구만 바꾸고, 아니면 다음 틱에 전할 펫을 정함.
+    /// 더미에 구겨 둔 같은 알림은 새 알림으로 바꿈
     func announce(_ notice: ScheduleNotice) {
+        notices.withdraw(topic: notice.topic)
         if let holder = pets.first(where: { $0.noticeTopic == notice.topic }) {
             holder.announce(notice)
             onEvent?("📅 [\(holder.id)] notice updated: \(notice.text)")
@@ -226,6 +232,7 @@ final class PetRoster: NoticeBoard {
     /// 그 주제의 알림을 거둠: 줄에서 빼고, 들고 있는 펫은 말풍선을 닫음 (전령은 인사하고 떠남)
     func withdraw(topic: String) {
         pendingNotices.removeAll { $0.topic == topic }
+        if notices.withdraw(topic: topic) { onEvent?("📭 crumpled notice withdrawn: \(topic)") }
         for pet in pets where pet.noticeTopic == topic {
             pet.dismissNotice()
             onEvent?("📭 [\(pet.id)] notice withdrawn: \(topic)")
@@ -233,13 +240,22 @@ final class PetRoster: NoticeBoard {
     }
 
     func holds(topic: String) -> Bool {
-        pendingNotices.contains { $0.topic == topic } || pets.contains { $0.noticeTopic == topic }
+        pendingNotices.contains { $0.topic == topic } || pets.contains { $0.noticeTopic == topic } || notices.holds(topic: topic)
     }
 
-    /// 사용자가 물건을 클릭함: 가까운 한가한 펫이 바로 주우러 감. 물건을 눌렀으면 true
+    /// 사용자가 물건을 클릭함: 구긴 알림이면 다시 띄우고, 떨어진 물건이면 가까운 한가한 펫이 바로 주우러 감. 눌렀으면 true
     @discardableResult
     func fetch(itemAt point: CGPoint, in world: World) -> Bool {
-        finding.fetch(itemAt: point, pets: pets, world: world)
+        if let notice = notices.reopen(at: point) {
+            announce(notice)
+            return true
+        }
+        return finding.fetch(itemAt: point, pets: pets, world: world)
+    }
+
+    /// 그 점에 누를 수 있는 물건(떨어진 물건, 구긴 알림)이 있는지
+    func hasItem(at point: CGPoint) -> Bool {
+        finding.item(at: point) != nil || notices.crumple(at: point) != nil
     }
 
     /// 화면 좌표의 점 위에 있는 가장 앞쪽 펫
