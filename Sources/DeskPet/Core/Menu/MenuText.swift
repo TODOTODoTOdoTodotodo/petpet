@@ -27,7 +27,7 @@ enum MenuText: CaseIterable {
     case language
     case rightClickHint
     case chase, chaseActiveWindow, chasePointer, chaseNothing
-    case skillJumps, followDisplay, quietDuringCalls, tireWithUsage, reactToTyping, pointerPranks, breakReminders
+    case skillJumps, followDisplay, quietDuringCalls, tireWithUsage, agentSignals, dockVisits, reactToTyping, pointerPranks, breakReminders
     case petSize, opacity
     case scheduleBubbles, hideScheduleTitles, allowCalendarAccess
     case openDebugLog, quit
@@ -94,6 +94,8 @@ enum MenuText: CaseIterable {
         case .followDisplay: ("Follow To Display", "모니터 따라가기")
         case .quietDuringCalls: ("Quiet During Calls", "통화 중 조용히")
         case .tireWithUsage: ("Tire With Claude Usage", "Claude 사용량만큼 지침")
+        case .agentSignals: ("AI Task Alerts", "AI 작업 알림")
+        case .dockVisits: ("Walk To Dock Icon", "Dock 아이콘 찾아가기")
         case .reactToTyping: ("React To Typing", "타이핑 반응")
         case .pointerPranks: ("Pointer Pranks", "포인터 장난")
         case .breakReminders: ("Break Reminders", "휴식 알림")

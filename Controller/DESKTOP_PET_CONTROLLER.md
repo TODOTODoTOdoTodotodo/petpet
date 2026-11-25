@@ -512,6 +512,7 @@
     - 레벨이 낮으면 이 선택에 난수를 쓰지 않으므로, 기존 시드 검사가 흔들리지 않는다.
   - **Lv.4 손 소품**: 우클릭 ▸ **Hold · 손에 들기** ▸ 모은 물건 중 하나를 고른다.
     - 앞손 가슴 높이에 0.75배로 든다. 자거나, 빼꼼하거나, 포인터를 들었을 때는 숨긴다(`HeldPlacement`).
+    - 2026-11-25: 모자처럼 프레임마다 손을 따라 움직인다. `HeadTracker`의 본을 일반화(`Bone.head` 몸 위 40%, `Bone.hand` 가슴 높이 35~75% × 얼굴 쪽 45%)해 서 있는 그림의 앞손 부분을 프레임에 맞춰 보고, `PetSkin.handShift`로 넘긴다. 손을 못 찾은 프레임은 머리 이동. 걷기 들썩임·웅크림·점프 자세(예: Samurai 점프 손 +6, 머리 +2)를 따라가고, 몸 안쪽에서 흔드는 팔은 몸통과 같이 잡혀 일부만 따라간다. 스킨별 범위는 `DESKPET_HEAD_REPORT=1 ./scripts/verify.sh`의 `hand` 칸.
   - **Lv.5 반짝 발자국**: 걸을 때 0.15초마다 50%로 발밑에 옅은 반짝임이 생기고 0.6초 동안 떠오르며 사라진다(무대).
   - **Lv.6 이름**: 우클릭 ▸ **Name… · 이름 짓기…**로 짓는다(12자, 비우면 지움). 쓰다듬으면 `❤️ 이름`이 뜨고, 메뉴 머리줄도 이름으로 바뀐다.
 - **펫 빼기**: Lv.2 이상이면 확인 창을 띄운다(`Lv.3 펫을 뺄까요?` · `친밀도·모자·이름이 사라집니다.`). 빼면 그 펫 기록을 지운다. 캐릭터를 바꿔도 기록은 유지된다.
@@ -535,6 +536,37 @@
 - **반짝 발자국 색**: 누적 ❤️ 300이면 분홍, 500이면 금색이다(`Treasury.sparkleTier`, `Pet.sparkleTier`).
 
 ---
+
+### 6.24 AI 작업 알림: 앱 아이콘 말풍선 (`AgentSignal`, `AgentSignalInbox`, `AgentSignalCoordinator`, `AgentHostFinder`, 2026-11-25 추가)
+- **방향**: 할당량을 캐지 않고, AI 도구가 공식 훅으로 신호를 보내게 함. 도구의 내부 기록·자격 증명·사용량 서버를 읽지 않음. 운영 비용 0.
+- **받은 편지함**: `~/.deskpet/signals/*.json` (맥·윈도우 같은 경로, 공백 없음 → 훅 한 줄을 그대로 씀).
+  - 파일: `{"kind": "working|done|waiting|limit", "source": "claude", "pid": 1234}`. 그 밖의 칸은 무시. 1KB 넘으면 안 읽음.
+  - `AgentSignalInbox`(Core, Foundation만)가 1초마다 `.json`만 읽고 바로 지움. 2분 넘은 파일은 버림(꺼져 있던 동안 쌓인 것). `.tmp`·숨은 파일은 쓰는 중이라 둠.
+  - `source`는 영문 소문자·숫자·`-_.` 32자 이내로 자름.
+- **앱 찾기(맥)**: `AgentHostFinder`가 `pid`에서 부모 프로세스(`sysctl KERN_PROC_PID`)를 따라 올라가 처음 만나는 `activationPolicy == .regular` 앱을 그 세션의 앱으로 봄. Claude 데스크톱이면 Claude, 터미널이면 터미널, VS Code면 VS Code. 못 찾으면 아이콘 없이 기호만.
+  - 훅 명령의 `$PPID` = 훅을 띄운 도구 프로세스(오래 사는 프로세스라 앱이 읽을 때까지 살아 있음).
+- **아이콘**: 앱 아이콘을 128px로 그려 투명 여백을 자르고 12×12로 줄인 뒤 알파를 0·255로 나눔(도트처럼). 번들 ID별로 한 번만 만듦. `SpeechBubbleNode`가 한 픽셀 1.5pt, nearest로 글자 앞에 그림. 설치된 앱에서 실행 중에 가져올 뿐 저장소·릴리스에 다른 회사 로고 없음.
+- **펫 반응** (`AgentSignalCoordinator`, `PetRoster.agents`):
+
+  | 신호 | 펫 |
+  | :--- | :--- |
+  | done | 알림을 들지 않은 기본 펫(한가한 펫 우선)이 아이콘 ✅ 4초. 이어서 그 앱을 찾아감(아래) |
+  | waiting | 아이콘 ✋를 알림(`ScheduleNotice`, 주제 `agent:도구:pid`)으로 맡김. 펫이 모두 알림을 들고 있으면 전령 |
+  | limit | 아이콘 💤 4초 |
+  | working | 그 세션의 ✋를 거둠 |
+
+  - ✋는 펫 클릭, 같은 세션의 다음 신호, 사용자가 신호 뒤 다른 앱에 있다가 그 앱(`World.focusedProcessID`)으로 돌아올 때 닫힘. 이미 그 앱을 보고 있었으면 한 번 떠났다 돌아와야 닫힘.
+  - 거둘 때는 `PetRoster.withdraw(topic:)`(`NoticeBoard`): 줄에서 빼고, 든 펫은 `dismissNotice()`(전령은 👋 하고 떠남).
+  - 통화 중에는 ✅·💤를 띄우지 않음. ✋는 띄움(사용자가 해야 할 일).
+- **끝난 앱 찾아가기** (2026-11-25): 한가하게 서 있는 펫만.
+  1. Dock 아이콘(`AgentHost.dockIcon`)이 아래쪽 Dock에 있고 펫과 같은 모니터면 `VisitBehavior`: 바닥을 따라 아이콘 바로 위(보이는 영역 아랫변)로 걸어감(멀면 뜀). 높은 창 위면 가까운 끝으로 내려가고(내려갈 끝은 그 발판에 있는 동안 고정), 떨어진 뒤 `AirborneBehavior.falling(then:)`으로 이어 감. 도착하면 동작 프레임 두 번(없으면 아래를 보고 깡충)으로 두드리고 아이콘 ✅ 3초. 15초·벽·마주 선 펫이면 그 자리에서 알림.
+  2. 아니면 그 앱의 맨 앞 창으로 스킬 도약(`LeapPlanner`·`SkillLeapBehavior`, 이미 그 창 위면 생략).
+  3. 둘 다 안 되면 제자리 깡충.
+- **Dock 아이콘 자리(맥)**: `DockIconLocator`가 Dock 프로세스의 손쉬운 사용 요소(`AXList` 아래 항목)에서 앱 파일 URL(없으면 이름)이 같은 항목의 위치·크기를 읽어 Cocoa 좌표로 바꿈. 손쉬운 사용 권한이 있어야 하고, 메뉴 **Walk To Dock Icon / Dock 아이콘 찾아가기**(기본 꺼짐, AI 작업 알림이 켜졌을 때만 보임)를 켤 때만 허용 창을 띄움. done 신호일 때만 읽음. 옆 Dock·자동 숨김은 `dockSpot`이 nil → 창 도약. 앱을 다시 빌드하면 서명이 바뀌어 권한을 다시 줘야 할 수 있음.
+- **펫 클릭 → 앱 앞으로**: 말풍선에 `appProcessID`가 있는 펫(✅·✋·💤)을 누르면 `PetPointerGesture`가 `agents.bringForward` → 껍데기가 `NSRunningApplication.activate`. ✋는 확인으로 닫힘.
+- 메뉴 **AI Task Alerts / AI 작업 알림**(기본 켜짐). 끄면 들어온 신호를 버리고 떠 있던 ✋도 거둠.
+- Claude Code 훅: `UserPromptSubmit` → working, `Stop` → done, `Notification`(권한 요청·입력 대기) → waiting. 설정 줄은 README "AI 작업 알림". 상태줄과 달리 데스크톱 앱 Code 탭에서도 돈다.
+- 윈도우: 받은 편지함·조율자·찾아가기는 Core라 그대로 쓸 수 있음. 앱 찾기(부모 프로세스·실행 파일 아이콘), 말풍선 아이콘 그리기, 작업 표시줄 단추 자리(UI Automation, 권한 불필요), 앱 앞으로(`SetForegroundWindow`)는 아직 없음.
 
 ## 7. 스킨
 - 스킨은 `PetSkin<Frame>`: 프레임 목록·애니메이션 선택은 공통 코드, 그림 형식(`Frame`)과 PNG 읽기는 플랫폼이 정한다. 맥은 `MacSkin = PetSkin<SKTexture>`, `MacSpriteLoader`가 텍스처와 RGBA 픽셀(`SpritePixels`, 위쪽 줄부터)을 넘긴다.

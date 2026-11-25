@@ -57,6 +57,8 @@ protocol PetAppearance: AnyObject {
     func supports(_ kind: AnimationKind) -> Bool
     /// 지금 프레임에서 머리가 서 있는 그림보다 옮겨 간 정도 (스킨 도트 단위, 화면 기준 x 오른쪽 +, y 위 +)
     func headShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector
+    /// 지금 프레임에서 앞손(물건 드는 손)이 서 있는 그림보다 옮겨 간 정도 (단위·방향은 머리와 같음)
+    func handShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector
     /// 애니메이션 한 바퀴 시간
     func cycleDuration(of kind: AnimationKind, facing: Facing) -> TimeInterval
 }
@@ -65,6 +67,9 @@ extension PetAppearance {
     var hatAnchor: CGVector { .zero }
     var aimBias: Double { 0 }
     func headShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector { .zero }
+    func handShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector {
+        headShift(for: kind, facing: facing, elapsed: elapsed)
+    }
 }
 
 /// 펫이 딛고 있는 면과, 그 면이 창이면 직전에 본 창 위치
@@ -229,8 +234,10 @@ final class Pet {
     // MARK: - Speech
 
     /// 말풍선을 띄움. 알림이 떠 있으면 잡담은 무시됨
-    func say(_ text: String, kind: Speech.Kind = .chatter, for duration: TimeInterval = 1.6) {
-        let next = Speech(text: text, kind: kind, remaining: duration)
+    /// badge·app: 앱 아이콘과, 펫을 누르면 앞으로 불러올 그 앱
+    func say(_ text: String, kind: Speech.Kind = .chatter, for duration: TimeInterval = 1.6,
+             badge: SpeechBadge? = nil, app: Int32? = nil) {
+        let next = Speech(text: text, kind: kind, remaining: duration, badge: badge, appProcessID: app)
         if let current = speech, !current.yields(to: next) { return }
         speech = next
     }
@@ -244,11 +251,7 @@ final class Pet {
     /// 클릭(쓰다듬기). 알림 말풍선이 떠 있으면 확인으로 보고 닫음. 전령은 인사하고 떠날 준비
     func poke() {
         if isShowingNotice {
-            clearSpeech()
-            if role == .messenger {
-                hasDelivered = true
-                say(Chatter.hello, for: 1.2)
-            }
+            dismissNotice()
             return
         }
         pokeTimes = pokeTimes.filter { clock - $0 <= Pet.pokeStreakWindow } + [clock]
@@ -258,9 +261,20 @@ final class Pet {
         }
     }
 
+    /// 알림 말풍선을 닫음. 전령은 인사하고 떠날 준비
+    func dismissNotice() {
+        guard isShowingNotice else { return }
+        clearSpeech()
+        if role == .messenger {
+            hasDelivered = true
+            say(Chatter.hello, for: 1.2)
+        }
+    }
+
     /// 일정 알림. 확인할 때까지 유지. 서 있으면 정면을 보고 잠시 멈추고, 자고 있었으면 깸
     func announce(_ notice: ScheduleNotice) {
-        speech = Speech(text: notice.text, kind: .notice, remaining: .infinity, topic: notice.topic, discreetText: notice.discreetText)
+        speech = Speech(text: notice.text, kind: .notice, remaining: .infinity, topic: notice.topic,
+                        discreetText: notice.discreetText, badge: notice.badge, appProcessID: notice.appProcessID)
         if let next = behavior.announcing(self, for: Pet.announcePause) {
             switchTo(next)
         }

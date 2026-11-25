@@ -2,10 +2,10 @@ import Foundation
 
 /// This object is responsible for the pets living on the desktop: adding, removing and restyling them,
 /// advancing each one through the world, letting them meet, giving every schedule notice its own pet
-/// (calling in messenger pets when the residents are busy), reacting when the user switches windows,
+/// (calling in messenger pets when the residents are busy) and every AI agent signal its bubble, reacting when the user switches windows,
 /// keeping quiet during calls, and dropping lost pets back onto the main display.
 /// Pets live here rather than in any display's scene, so display changes never lose them.
-final class PetRoster {
+final class PetRoster: NoticeBoard {
     private(set) var pets: [Pet] = []
     private let planner: BehaviorPlanner
     /// 마주치면 인사하거나 티격태격
@@ -28,6 +28,8 @@ final class PetRoster {
     let trains = TrainCoordinator()
     /// 멈춘 포인터를 펫이 잠깐 들고 달아나는 장난 (기본 꺼짐)
     let pranks = CursorPrankCoordinator()
+    /// AI 도구가 보낸 신호(끝남·기다림·한도)를 앱 아이콘 말풍선으로
+    let agents = AgentSignalCoordinator()
     /// 사용 중에 가끔 떨어지는 물건과 줍기
     let finding: FindingCoordinator
     /// 펫이 겪은 일을 친밀도(❤️)·레벨로
@@ -205,6 +207,7 @@ final class PetRoster {
         follow.step(dt: dt, pets: pets, world: world, target: chaseTarget, quiet: isQuiet)
         stepProjectiles(dt: dt)
         affection.step(dt: dt, pets: pets, idleSeconds: idleSeconds)
+        agents.step(pets: pets, world: world, board: self, planner: planner, quiet: isQuiet)
         dismissDeliveredMessengers()
         deliverPendingNotices(in: world)
     }
@@ -218,6 +221,19 @@ final class PetRoster {
         }
         pendingNotices.append(notice)
         onEvent?("📅 queued notice: \(notice.text)")
+    }
+
+    /// 그 주제의 알림을 거둠: 줄에서 빼고, 들고 있는 펫은 말풍선을 닫음 (전령은 인사하고 떠남)
+    func withdraw(topic: String) {
+        pendingNotices.removeAll { $0.topic == topic }
+        for pet in pets where pet.noticeTopic == topic {
+            pet.dismissNotice()
+            onEvent?("📭 [\(pet.id)] notice withdrawn: \(topic)")
+        }
+    }
+
+    func holds(topic: String) -> Bool {
+        pendingNotices.contains { $0.topic == topic } || pets.contains { $0.noticeTopic == topic }
     }
 
     /// 사용자가 물건을 클릭함: 가까운 한가한 펫이 바로 주우러 감. 물건을 눌렀으면 true

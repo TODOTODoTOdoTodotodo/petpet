@@ -51,6 +51,12 @@ enum AppMenuChecks {
         check.expect(!settings.skillJumpsEnabled && !roster.skills.isEnabled && rebuilds == 1, "도약 끄기: 저장·펫 적용·메뉴 다시 그림")
         menu.perform(.toggle(.quietDuringCalls))
         check.expect(!settings.quietDuringCalls && host.changes.last == .toggle(.quietDuringCalls), "통화 중 조용히: 껍데기에 알림")
+        let alertsOn = settings.agentSignalsEnabled && roster.agents.isEnabled
+            && menu.nodes().find(MenuText.agentSignals.text(in: .english))?.checked == true
+        menu.perform(.toggle(.agentSignals))
+        check.expect(alertsOn && !settings.agentSignalsEnabled && !roster.agents.isEnabled
+                     && menu.nodes().find(MenuText.agentSignals.text(in: .english))?.checked == false,
+                     "AI 작업 알림: 기본 켜짐, 끄면 저장·펫 적용·체크 해제")
         menu.perform(.scale(2.0))
         check.expect(settings.scale == 2.0 && roster.residents.allSatisfy { $0.scale == 2.0 }, "크기 바꾸면 펫도 바뀜")
         menu.perform(.chase(PointerChase.key))

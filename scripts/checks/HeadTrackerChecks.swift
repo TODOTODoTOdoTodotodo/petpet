@@ -1,13 +1,16 @@
 import Foundation
 
-/// This object is responsible for checking that hats follow the head frame by frame:
-/// the head template finds a moved head, ignores raised arms, falls back when the head is gone,
-/// real skins give small believable shifts, and HatPlacement adds the current frame's shift.
+/// This object is responsible for checking that hats follow the head and held items follow the front hand frame by frame:
+/// the head template finds a moved head, ignores raised arms, falls back when the head is gone, the hand template
+/// follows the chest-high front of the body but not a nodding head, real skins give small believable shifts,
+/// and HatPlacement / HeldPlacement add the current frame's shift.
 enum HeadTrackerChecks {
     static func run(_ check: Checker, skinsDirectory: URL) {
         check.section("Head tracking (hat follows head)")
         synthetic(check)
+        hand(check)
         placement(check)
+        heldPlacement(check)
         realSkins(check, skinsDirectory: skinsDirectory)
     }
 
@@ -57,6 +60,46 @@ enum HeadTrackerChecks {
         check.expect(HeadTracker.shift(of: wrongSize, from: template) == nil, "크기가 다른 그림은 재지 않음")
     }
 
+    // MARK: - 손
+
+    private static func hand(_ check: Checker) {
+        // 왼쪽(west)을 보는 그림: 머리 5~8줄, 몸 8~14줄, 앞(왼쪽)으로 내민 팔 10~11줄
+        func body(drop: Int = 0, nod: Int = 0) -> SpritePixels {
+            var pixels = figure(headDrop: nod)
+            var rgba = pixels.rgba
+            for row in 10..<12 { for column in 2..<5 {
+                let i = ((row + drop) * 16 + column) * 4
+                rgba[i] = 250; rgba[i + 1] = 210; rgba[i + 2] = 160; rgba[i + 3] = 255
+            } }
+            pixels = SpritePixels(width: 16, height: 16, rgba: rgba)
+            guard drop != 0 else { return pixels }
+            // 몸 전체를 drop만큼 내림
+            var moved = [UInt8](repeating: 0, count: rgba.count)
+            for row in 0..<16 where row + drop >= 0 && row + drop < 16 {
+                for column in 0..<16 {
+                    let from = (row * 16 + column) * 4, to = ((row + drop) * 16 + column) * 4
+                    for channel in 0..<4 { moved[to + channel] = figure().rgba[from + channel] }
+                }
+            }
+            for row in 10..<12 { for column in 2..<5 {
+                let i = ((row + drop) * 16 + column) * 4
+                moved[i] = 250; moved[i + 1] = 210; moved[i + 2] = 160; moved[i + 3] = 255
+            } }
+            return SpritePixels(width: 16, height: 16, rgba: moved)
+        }
+        guard let template = HeadTracker.template(from: body(), bone: .hand, front: .west) else {
+            check.expect(false, "손 본 만들기")
+            return
+        }
+        check.expect(HeadTracker.shift(of: body(), from: template) == .zero, "손: 같은 그림이면 0")
+        check.expect(HeadTracker.shift(of: body(drop: 2), from: template) == CGVector(dx: 0, dy: -2),
+                     "손: 몸이 2칸 웅크리면 y -2", "\(String(describing: HeadTracker.shift(of: body(drop: 2), from: template)))")
+        check.expect(HeadTracker.shift(of: body(nod: 2), from: template) == .zero,
+                     "손: 고개만 숙이면 그대로 (머리와 따로)", "\(String(describing: HeadTracker.shift(of: body(nod: 2), from: template)))")
+        let empty = SpritePixels(width: 16, height: 16, rgba: [UInt8](repeating: 0, count: 16 * 16 * 4))
+        check.expect(HeadTracker.shift(of: empty, from: template) == nil, "손: 못 찾으면 nil (머리 이동으로 대신함)")
+    }
+
     // MARK: - 모자 자리
 
     /// 머리가 늘 (1, -2) 옮겨 간 모습
@@ -69,6 +112,37 @@ enum HeadTrackerChecks {
         func headShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector {
             CGVector(dx: 1, dy: -2)
         }
+    }
+
+    /// 손이 늘 (2, 3) 옮겨 간 모습
+    private final class Reaching: PetAppearance {
+        let name = "Reaching"
+        let body = BodyMetrics(footInset: 0, width: 24, height: 40, centerX: 24)
+        let skillStyle: SkillStyle = .bigJump
+        func supports(_ kind: AnimationKind) -> Bool { true }
+        func cycleDuration(of kind: AnimationKind, facing: Facing) -> TimeInterval { 1 }
+        func handShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector {
+            CGVector(dx: 2, dy: 3)
+        }
+    }
+
+    private static func heldPlacement(_ check: Checker) {
+        let item = ItemCatalog.all[0]
+        let still = Sim.pet(at: CGPoint(x: 500, y: 80), appearance: FakeAppearance(), behavior: IdleBehavior(duration: 99))
+        let reaching = Sim.pet(at: CGPoint(x: 500, y: 80), appearance: Reaching(), behavior: IdleBehavior(duration: 99))
+        still.heldItem = item
+        reaching.heldItem = item
+        reaching.facing = still.facing
+        guard let base = HeldPlacement.rect(on: still), let moved = HeldPlacement.rect(on: reaching) else {
+            check.expect(false, "손에 든 물건 자리")
+            return
+        }
+        let s = still.scale
+        check.expect(abs(moved.minX - base.minX - 2 * s) < 0.01 && abs(moved.minY - base.minY - 3 * s) < 0.01,
+                     "손에 든 물건이 지금 프레임의 손 이동만큼 옮겨 감", "\(base) → \(moved)")
+        let defaulted = Sim.pet(at: CGPoint(x: 500, y: 80), appearance: Bobbing(), behavior: IdleBehavior(duration: 99))
+        check.expect(defaulted.appearance.handShift(for: .idle, facing: .west, elapsed: 0) == CGVector(dx: 1, dy: -2),
+                     "손 이동을 따로 모르면 머리 이동을 따라감")
     }
 
     private static func placement(_ check: Checker) {
@@ -103,11 +177,18 @@ enum HeadTrackerChecks {
                 let duration = skin.cycleDuration(of: kind, facing: .west)
                 guard duration > 0 else { continue }
                 var shifts: [CGVector] = []
+                var hands: [CGVector] = []
                 var t = 0.0
-                while t < duration { shifts.append(skin.headShift(for: kind, facing: .west, elapsed: t)); t += 0.05 }
+                while t < duration {
+                    shifts.append(skin.headShift(for: kind, facing: .west, elapsed: t))
+                    hands.append(skin.handShift(for: kind, facing: .west, elapsed: t))
+                    t += 0.05
+                }
                 let dys = shifts.map(\.dy), dxs = shifts.map(\.dx)
-                line.append("\(kind.rawValue) y\(fmt(dys.min()!))~\(fmt(dys.max()!)) x\(fmt(dxs.min()!))~\(fmt(dxs.max()!))")
-                for shift in shifts {
+                let hys = hands.map(\.dy), hxs = hands.map(\.dx)
+                line.append("\(kind.rawValue) y\(fmt(dys.min()!))~\(fmt(dys.max()!)) x\(fmt(dxs.min()!))~\(fmt(dxs.max()!))"
+                            + " hand y\(fmt(hys.min()!))~\(fmt(hys.max()!)) x\(fmt(hxs.min()!))~\(fmt(hxs.max()!))")
+                for shift in shifts + hands {
                     measured += 1
                     if max(abs(shift.dx), abs(shift.dy)) > max(abs(largest.dx), abs(largest.dy)) {
                         largest = shift

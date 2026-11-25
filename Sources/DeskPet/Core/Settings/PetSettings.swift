@@ -71,6 +71,18 @@ final class PetSettings {
         set { store.set(flag: newValue, forKey: "tiresWithClaudeUsage") }
     }
 
+    /// AI 도구가 보낸 신호(끝남·기다림·한도)를 펫이 앱 아이콘 말풍선으로 알림 (기본 켜짐)
+    var agentSignalsEnabled: Bool {
+        get { store.flag(forKey: "agentSignalsEnabled") ?? true }
+        set { store.set(flag: newValue, forKey: "agentSignalsEnabled") }
+    }
+
+    /// AI 작업이 끝나면 펫이 그 앱의 Dock 아이콘으로 걸어감 (맥은 손쉬운 사용 권한 필요, 기본 꺼짐)
+    var visitsDockIcons: Bool {
+        get { store.flag(forKey: "visitsDockIcons") ?? false }
+        set { store.set(flag: newValue, forKey: "visitsDockIcons") }
+    }
+
     /// 통화 중 조용히 (기본 켜짐)
     var quietDuringCalls: Bool {
         get { store.flag(forKey: "quietDuringCalls") ?? true }

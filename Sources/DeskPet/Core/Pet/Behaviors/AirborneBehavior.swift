@@ -12,6 +12,8 @@ final class AirborneBehavior: PetBehavior {
     private let landingRemark: String?
     /// 공중에서 몸이 한 바퀴 도는지 (친밀도 Lv.3 점프)
     private let somersault: Bool
+    /// 내려온 뒤 이어서 할 일 (가던 길: 앱 아이콘 찾아가기 등). 없으면 잠깐 멈춤
+    private let afterLanding: PetBehavior?
     private var airTime: TimeInterval = 0
     /// 앞쪽으로 도는 방향 부호 (동쪽 점프면 시계 방향)
     private var spinSign: CGFloat = 1
@@ -22,7 +24,9 @@ final class AirborneBehavior: PetBehavior {
     /// 인사하며 사용자를 보는 시간
     static let greetTime: TimeInterval = 1.4
 
-    init(name: String, launch: CGVector, dizzy: Bool = false, landingRemark: String? = nil, somersault: Bool = false) {
+    init(name: String, launch: CGVector, dizzy: Bool = false, landingRemark: String? = nil, somersault: Bool = false,
+         afterLanding: PetBehavior? = nil) {
+        self.afterLanding = afterLanding
         self.name = name
         self.launch = launch
         self.isDizzy = dizzy
@@ -38,8 +42,9 @@ final class AirborneBehavior: PetBehavior {
         return -spinSign * 2 * .pi * CGFloat(progress)
     }
 
-    static func falling(drift: CGFloat = 0) -> AirborneBehavior {
-        AirborneBehavior(name: "falling", launch: CGVector(dx: drift, dy: 0))
+    /// then: 내려온 뒤 이어서 할 일
+    static func falling(drift: CGFloat = 0, then next: PetBehavior? = nil) -> AirborneBehavior {
+        AirborneBehavior(name: "falling", launch: CGVector(dx: drift, dy: 0), afterLanding: next)
     }
 
     static func jumping(toward facing: Facing, motionScale: CGFloat, somersault: Bool = false) -> AirborneBehavior {
@@ -90,7 +95,7 @@ final class AirborneBehavior: PetBehavior {
                     pet.note(.greeted)
                     return IdleBehavior(duration: Self.greetTime, lookAtUser: true, name: "greetingUser")
                 }
-                return IdleBehavior(duration: PetPhysics.landingPause)
+                return afterLanding ?? IdleBehavior(duration: PetPhysics.landingPause)
             }
         }
         return nil

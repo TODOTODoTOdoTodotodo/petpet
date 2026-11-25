@@ -17,6 +17,9 @@ final class AppController: NSObject, NSApplicationDelegate {
     private let announcer = ScheduleAnnouncer()
     private var scheduleWatcher: ScheduleWatcher!
     private let usageWatcher = ClaudeUsageWatcher()
+    /// AI 도구 훅이 남긴 신호와, 그 세션이 사는 앱 찾기
+    private let agentInbox = AgentSignalInbox(folder: AgentSignalInbox.homeFolder)
+    private let agentHosts = AgentHostFinder()
     /// 메뉴에 보일 Claude 사용량 요약. nil이면 사용량 정보 없음, ""이면 모두 초기화됨
     private var usageText: String?
     /// App Nap으로 타이머가 멈추지 않게 유지하는 활동 토큰 (맥 자동 잠자기는 허용)
@@ -50,6 +53,10 @@ final class AppController: NSObject, NSApplicationDelegate {
         roster.typing.onEvent = { PetLogger.shared.log($0) }
         roster.rhythm.onEvent = { PetLogger.shared.log($0) }
         roster.finding.onEvent = { PetLogger.shared.log($0) }
+        roster.agents.onEvent = { PetLogger.shared.log($0) }
+        roster.agents.onBringForward = { app in
+            NSRunningApplication(processIdentifier: app)?.activate(options: [.activateAllWindows])
+        }
         treasuryStore.onEvent = { PetLogger.shared.log($0) }
         let treasury = treasuryStore.load()
         PetLogger.shared.log("🎒 collection: \(treasury.total) items, \(treasury.counts.count) kinds")
@@ -115,6 +122,13 @@ final class AppController: NSObject, NSApplicationDelegate {
 
         usageWatcher.onChange = { [weak self] usage in self?.applyUsage(usage) }
         usageWatcher.start()
+
+        agentInbox.onSignal = { [weak self, weak roster] signal in
+            guard let self else { return }
+            let dock = signal.kind == .done && self.settings.visitsDockIcons
+            roster?.agents.receive(signal, from: self.agentHosts.host(for: signal.processID, withDockIcon: dock))
+        }
+        agentInbox.start()
     }
 
     /// Claude 사용량을 펫 기력과 메뉴 요약에 반영
@@ -178,6 +192,7 @@ final class AppController: NSObject, NSApplicationDelegate {
 
 extension AppController: AppMenuHost {
     var usageSummary: String? { usageText }
+    var supportsDockVisits: Bool { true }
 
     var calendarAccessDenied: Bool {
         calendar.eventAccess == .denied || calendar.reminderAccess == .denied
@@ -198,6 +213,12 @@ extension AppController: AppMenuHost {
             } else {
                 scheduleWatcher.stop()
             }
+        case .toggle(.dockVisits):
+            // 켤 때 권한이 없으면 시스템 허용 창 (허용 전에는 창 도약·제자리 알림으로 대신함)
+            if settings.visitsDockIcons && !DockIconLocator.isTrusted {
+                DockIconLocator.requestTrust()
+            }
+            PetLogger.shared.log("🧭 dock visits \(settings.visitsDockIcons ? "on" : "off"), accessibility \(DockIconLocator.isTrusted ? "granted" : "not granted")")
         case .toggle(.scheduleTitles):
             announcer.hidesTitles = settings.hidesScheduleTitles
         default:

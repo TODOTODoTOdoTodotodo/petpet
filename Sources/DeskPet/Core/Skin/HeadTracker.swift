@@ -1,9 +1,24 @@
 import Foundation
 
-/// This object is responsible for finding where a character's head moved to in one animation frame,
-/// compared with its standing picture: the top part of the standing body is used as a template and slid
+/// 본으로 쓸 부분 (서 있는 그림의 보이는 몸 기준 비율)
+struct Bone {
+    /// 위에서부터 (0 맨 윗줄, 1 발)
+    let rows: ClosedRange<Double>
+    /// 얼굴 쪽 가장자리부터 (0 앞, 1 뒤). 정면·뒷면 그림은 앞뒤가 없어 전체 폭
+    let columns: ClosedRange<Double>
+    /// 못 찾았을 때 보이는 윗줄이 내려간 만큼 따라갈지 (머리만)
+    let followsTopWhenLost: Bool
+
+    /// 몸 위쪽 40%
+    static let head = Bone(rows: 0...HeadTracker.headShare, columns: 0...1, followsTopWhenLost: true)
+    /// 가슴 높이의 앞쪽: 물건을 드는 손과 팔
+    static let hand = Bone(rows: 0.35...0.75, columns: 0...0.45, followsTopWhenLost: false)
+}
+
+/// This object is responsible for finding where a part of a character (its head, or its front hand) moved to in one
+/// animation frame, compared with its standing picture: that part of the standing body is used as a template and slid
 /// over the frame to the place where the most pixels agree in color. Raised arms or weapons above the head
-/// do not fool it, because they do not look like the head. Runs once while a skin loads, never per tick.
+/// do not fool the head, because they do not look like the head. Runs once while a skin loads, never per tick.
 enum HeadTracker {
     /// 몸 높이 중 머리 본으로 쓰는 위쪽 비율
     static let headShare = 0.4
@@ -21,22 +36,35 @@ enum HeadTracker {
         /// 기준 그림의 보이는 맨 윗줄
         fileprivate let top: Int
         let width: Int
+        fileprivate var followsTopWhenLost = true
 
         var isEmpty: Bool { points.isEmpty }
     }
 
-    static func template(from reference: SpritePixels, mirrored: Bool = false) -> Template? {
+    /// front: 그림이 보는 쪽 (east 오른쪽, west 왼쪽). 그 밖이면 전체 폭
+    static func template(from reference: SpritePixels, mirrored: Bool = false, bone: Bone = .head, front: Facing? = nil) -> Template? {
         let pixels = mirrored ? reference.mirrored() : reference
         guard case .visible(let bounds) = SpriteAlphaScanner.scan(pixels) else { return nil }
         let top = pixels.height - Int(bounds.maxY)
-        let rows = max(4, Int((Double(bounds.height) * headShare).rounded()))
+        let height = Double(bounds.height)
+        let first = top + Int((height * bone.rows.lowerBound).rounded())
+        let last = top + max(4, Int((height * bone.rows.upperBound).rounded()))
+        let width = Double(bounds.width)
+        let columns: ClosedRange<Double>
+        switch front {
+        case .east: columns = (Double(bounds.maxX) - width * bone.columns.upperBound)...(Double(bounds.maxX) - width * bone.columns.lowerBound)
+        case .west: columns = (Double(bounds.minX) + width * bone.columns.lowerBound)...(Double(bounds.minX) + width * bone.columns.upperBound)
+        default: columns = Double(bounds.minX)...Double(bounds.maxX)
+        }
         var points: [(column: Int, row: Int, rgb: (Int, Int, Int))] = []
-        for row in top..<min(pixels.height, top + rows) {
-            for column in 0..<pixels.width where pixels.alpha(column: column, row: row) > 0 {
+        for row in max(0, first)..<min(pixels.height, last) {
+            for column in 0..<pixels.width where columns.contains(Double(column) + 0.5) && pixels.alpha(column: column, row: row) > 0 {
                 points.append((column, row, pixels.rgb(column: column, row: row)))
             }
         }
-        return Template(points: points, top: top, width: pixels.width)
+        var template = Template(points: points, top: top, width: pixels.width)
+        template.followsTopWhenLost = bone.followsTopWhenLost
+        return template
     }
 
     /// 기준 그림 대비 머리 이동 (이미지 픽셀, x는 오른쪽 +, y는 위 +). 크기가 다르거나 비었으면 nil
@@ -58,6 +86,7 @@ enum HeadTracker {
         if let best, Double(best.score) >= Double(template.points.count) * minimumAgreement {
             return CGVector(dx: best.dx, dy: -best.dy)
         }
+        guard template.followsTopWhenLost else { return nil }
         // 머리를 못 찾으면(누운 잠 등) 보이는 맨 윗줄이 내려간 만큼만 따라감. 올라간 윗줄은 팔·무기일 수 있어 무시
         guard case .visible(let bounds) = SpriteAlphaScanner.scan(frame) else { return nil }
         let drop = (frame.height - Int(bounds.maxY)) - template.top

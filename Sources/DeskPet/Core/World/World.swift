@@ -16,6 +16,8 @@ final class World {
     private(set) var focusedWindowID: UInt32?
     /// 사용자가 보고 있는 앱의 번들 ID (앱 종류별 반응용)
     private(set) var focusedBundleID: String?
+    /// 사용자가 보고 있는 앱의 프로세스 ID
+    private(set) var focusedProcessID: Int32?
 
     /// 설 수 없을 만큼 짧은 발판·벽 조각 기준
     static let minimumEdgeLength: CGFloat = 24
@@ -38,6 +40,7 @@ final class World {
     func focus(processID: Int32?, bundleID: String? = nil) {
         focusedWindowID = processID.flatMap { pid in windows.first { $0.processID == pid }?.id }
         focusedBundleID = bundleID
+        focusedProcessID = processID
     }
 
     // MARK: - Queries

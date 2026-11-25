@@ -8,9 +8,15 @@ protocol AppMenuHost: AnyObject {
     var usageSummary: String? { get }
     /// 일정 권한을 거절당했는지 (권한 허용 항목을 보일지)
     var calendarAccessDenied: Bool { get }
+    /// AI 작업이 끝난 앱의 Dock 아이콘을 찾을 수 있는지 (맥만)
+    var supportsDockVisits: Bool { get }
     /// 껍데기 쪽에 적용할 설정이 바뀜 (값은 settings에서 읽음)
     func settingChanged(_ command: MenuCommand)
     func run(_ action: PlatformAction)
+}
+
+extension AppMenuHost {
+    var supportsDockVisits: Bool { false }
 }
 
 /// This object is responsible for the status menu (macOS menu bar 👾, Windows tray) as data: pets, collection,
@@ -46,6 +52,7 @@ final class AppMenu {
         roster.rhythm.isEnabled = settings.workRhythmEnabled
         roster.typing.isEnabled = settings.typingReactionsEnabled
         roster.pranks.isEnabled = settings.cursorPranksEnabled
+        roster.agents.isEnabled = settings.agentSignalsEnabled
         roster.aim.accuracy = settings.throwAccuracy
     }
 
@@ -66,6 +73,12 @@ final class AppMenu {
             .command(text(.quietDuringCalls), .toggle(.quietDuringCalls), checked: settings.quietDuringCalls),
             .command(MenuText.tireWithUsage(usageText(in: language), in: language), .toggle(.tiresWithUsage),
                      checked: settings.tiresWithClaudeUsage),
+            .command(text(.agentSignals), .toggle(.agentSignals), checked: settings.agentSignalsEnabled),
+        ]
+        if host?.supportsDockVisits == true && settings.agentSignalsEnabled {
+            nodes.append(.command(text(.dockVisits), .toggle(.dockVisits), checked: settings.visitsDockIcons))
+        }
+        nodes += [
             .command(text(.reactToTyping), .toggle(.typing), checked: settings.typingReactionsEnabled),
             .command(text(.pointerPranks), .toggle(.pointerPranks), checked: settings.cursorPranksEnabled),
             .submenu(text(.throwAccuracy), ThrowAccuracy.allCases.map { level in
@@ -159,6 +172,11 @@ final class AppMenu {
             settings.quietDuringCalls.toggle()
         case .tiresWithUsage:
             settings.tiresWithClaudeUsage.toggle()
+        case .agentSignals:
+            settings.agentSignalsEnabled.toggle()
+            roster.agents.isEnabled = settings.agentSignalsEnabled
+        case .dockVisits:
+            settings.visitsDockIcons.toggle()
         case .schedules:
             settings.schedulesEnabled.toggle()
         case .scheduleTitles:

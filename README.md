@@ -173,6 +173,8 @@ irm https://github.com/TODOTODoTOdoTodotodo/petpet/releases/latest/download/inst
 | 모니터 따라가기 | 보는 모니터로 펫이 건너옴 | 켬 |
 | 통화 중 조용히 | 마이크 사용 중이면 조용히 | 켬 |
 | Claude 사용량만큼 지침 | 사용량이 많을수록 펫이 지침 (아래 참고) | 켬 |
+| AI 작업 알림 | AI 도구가 끝나거나 확인을 기다리면 앱 아이콘 말풍선 (아래 참고) | 켬 |
+| Dock 아이콘 찾아가기 | 작업이 끝난 앱의 Dock 아이콘 위로 걸어가 두드림 (손쉬운 사용 권한) | 끔 |
 | 타이핑 반응 | 빠르게 치면 따라 두드리기 | 켬 |
 | 포인터 장난 | 펫이 포인터를 잠깐 들고 달아남 | 끔 |
 | 던지기 정확도 | 늘 명중 / 자주 명중 / 가끔 명중 / 엉망 (캐릭터마다 조금씩 다름) | 자주 명중 |
@@ -192,6 +194,8 @@ irm https://github.com/TODOTODoTOdoTodotodo/petpet/releases/latest/download/inst
 | 마이크 | 사용 중인지 여부만 (소리는 읽지 않음) | 불필요 |
 | 포인터 | 위치. 포인터 장난을 켰을 때만 옮김 | 불필요 |
 | 캘린더·미리 알림 | 일정 시각과 제목 (일정 말풍선을 켰을 때만) | 처음 한 번 요청 |
+| AI 작업 알림 | 신호 종류와 보낸 프로세스 번호, 그 프로세스를 품은 앱의 아이콘 (대화 내용은 받지 않음) | 불필요 |
+| Dock 아이콘 자리 | Dock 항목의 이름·위치·크기 (Dock 아이콘 찾아가기를 켰을 때만) | 손쉬운 사용, 켤 때 요청 |
 
 - 네트워크 연결 없음. 외부 서버로 보내는 데이터 없음
 - 저장 위치
@@ -217,6 +221,39 @@ mkdir -p "$pet_dir" && echo "$input" | jq -c '{five_hour: .rate_limits.five_hour
 Windows에서 Git Bash로 도는 상태줄이면 첫 줄만 `pet_dir="$APPDATA/DeskPet"`로 바꿈 (시험판, 실제 PC 확인 전).
 
 `$input`은 상태줄 스크립트가 받은 JSON 전체. 상태줄 설정 방법은 [Claude Code 문서](https://code.claude.com/docs/en/statusline.md) 참고.
+
+## AI 작업 알림 (선택)
+
+AI 코딩 도구가 일을 끝내거나 확인을 기다리면 펫이 말풍선으로 알림.
+말풍선에 그 세션이 도는 앱(Claude, 터미널, VS Code 등)의 아이콘 표시.
+
+| 신호 | 펫 |
+|---|---|
+| 끝남 | 앱 아이콘 ✅. 그 앱의 Dock 아이콘 위로 걸어가 두드림(켰을 때), 아니면 그 앱 창 위로 도약, 창이 없으면 제자리 깡충 |
+| 확인 기다림 (권한 요청 등) | 앱 아이콘 ✋. 펫 클릭, 그 앱으로 이동, 다시 일을 맡기면 닫힘 |
+| 한도 도달 | 앱 아이콘 💤 |
+
+- 아이콘 말풍선을 든 펫을 누르면 그 앱이 앞으로 옴
+- Dock 아이콘 찾아가기: 메뉴에서 켜면 손쉬운 사용 허용 창이 뜸. 시스템 설정 ▸ 개인정보 보호 및 보안 ▸ 손쉬운 사용에서 DeskPet 허용. 허용 전·Dock이 옆에 있거나 숨김이면 창 도약으로 대신함
+
+- 도구의 훅이 `~/.deskpet/signals/`에 남긴 작은 파일만 읽음. 읽은 파일은 바로 지움
+- 파일 내용은 신호 종류·도구 이름·프로세스 번호뿐. 대화·경로·메시지 없음
+- 앱 아이콘은 이 맥에 설치된 앱에서 가져옴. 네트워크 없음
+- Claude Code 데스크톱 앱과 터미널 모두 동작
+
+Claude Code: `~/.claude/settings.json`에 아래 `hooks` 추가 (이미 `hooks`가 있으면 그 안에 세 항목만).
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "mkdir -p ~/.deskpet/signals && printf '{\"kind\":\"working\",\"source\":\"claude\",\"pid\":%s}' $PPID > ~/.deskpet/signals/$$.tmp && mv ~/.deskpet/signals/$$.tmp ~/.deskpet/signals/$$.json" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "mkdir -p ~/.deskpet/signals && printf '{\"kind\":\"done\",\"source\":\"claude\",\"pid\":%s}' $PPID > ~/.deskpet/signals/$$.tmp && mv ~/.deskpet/signals/$$.tmp ~/.deskpet/signals/$$.json" }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "mkdir -p ~/.deskpet/signals && printf '{\"kind\":\"waiting\",\"source\":\"claude\",\"pid\":%s}' $PPID > ~/.deskpet/signals/$$.tmp && mv ~/.deskpet/signals/$$.tmp ~/.deskpet/signals/$$.json" }] }]
+  }
+}
+```
+
+다른 도구도 같은 파일 하나면 됨: `{"kind": "done", "source": "도구 이름", "pid": 도구 프로세스 번호}`를 `~/.deskpet/signals/이름.json`으로 저장. `kind`는 `working`, `done`, `waiting`, `limit` 중 하나.
 
 ## 아이디어 보내기
 

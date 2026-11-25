@@ -47,7 +47,10 @@ final class PetPointerGesture {
     func primaryUp(at point: CGPoint) {
         if let press = pressed {
             pressed = nil
+            // AI 신호 말풍선을 든 펫이면 그 앱을 앞으로
+            let app = press.pet.speech?.appProcessID
             press.pet.poke()
+            if let app { roster.agents.bringForward(app, by: press.pet) }
             onEvent?("👆 [\(press.pet.id)] poked")
         } else if let pet = held {
             pet.drag(to: point)

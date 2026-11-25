@@ -53,8 +53,9 @@ final class PetSkin<Frame>: PetAppearance {
     /// 방향별 서 있는 그림 픽셀 (머리 본의 기준)
     private var referencePixels: [Facing: SpritePixels] = [:]
     private var headTemplates: [Facing: HeadTracker.Template?] = [:]
-    /// 동작 칸별·방향별 프레임마다 머리가 옮겨 간 정도 (스킨 도트 단위, 그림 기준 x 오른쪽 +, y 위 +)
-    private var headShifts: [String: [Facing: [CGVector]]] = [:]
+    private var handTemplates: [Facing: HeadTracker.Template?] = [:]
+    /// 동작 칸별·방향별 프레임마다 머리·손이 옮겨 간 정도 (스킨 도트 단위, 그림 기준 x 오른쪽 +, y 위 +)
+    private var headShifts: [String: [Facing: [BoneShift]]] = [:]
     /// 동작별 프레임 간격 덮어쓰기 (metadata.json의 "deskpet": {"intervals": {"idle": 0.06}})
     private var intervalOverrides: [AnimationKind: TimeInterval] = [:]
 
@@ -91,8 +92,17 @@ final class PetSkin<Frame>: PetAppearance {
         guard let clip = clip(for: kind, facing: facing), !clip.frames.isEmpty else { return .zero }
         let index = clip.index(at: elapsed, for: kind)
         guard index < clip.heads.count else { return .zero }
-        let shift = clip.heads[index]
+        let shift = clip.heads[index].head
         // 좌우 반전해 그리면 x도 반대
+        return CGVector(dx: clip.mirrored ? -shift.dx : shift.dx, dy: shift.dy)
+    }
+
+    /// 지금 그리는 프레임에서 앞손(물건 드는 손)이 서 있는 그림보다 옮겨 간 정도. 손을 못 찾은 프레임은 머리 이동
+    func handShift(for kind: AnimationKind, facing: Facing, elapsed: TimeInterval) -> CGVector {
+        guard let clip = clip(for: kind, facing: facing), !clip.frames.isEmpty else { return .zero }
+        let index = clip.index(at: elapsed, for: kind)
+        guard index < clip.heads.count else { return .zero }
+        let shift = clip.heads[index].hand
         return CGVector(dx: clip.mirrored ? -shift.dx : shift.dx, dy: shift.dy)
     }
 
@@ -102,8 +112,8 @@ final class PetSkin<Frame>: PetAppearance {
         let frames: [Frame]
         let mirrored: Bool
         let interval: TimeInterval
-        /// 프레임마다 머리 이동 (비었으면 움직이지 않는 것으로 봄)
-        var heads: [CGVector] = []
+        /// 프레임마다 머리·손 이동 (비었으면 움직이지 않는 것으로 봄)
+        var heads: [BoneShift] = []
 
         func index(at elapsed: TimeInterval, for kind: AnimationKind) -> Int {
             let tick = Int(elapsed / interval)
@@ -164,7 +174,7 @@ final class PetSkin<Frame>: PetAppearance {
     }
 
     /// 그 방향 이미지가 있으면 그대로, 없으면 반대 방향을 좌우 반전, 그것도 없으면 정면
-    private func sided(_ table: [Facing: [Frame]], heads: [Facing: [CGVector]]? = nil, facing: Facing, interval: TimeInterval) -> Clip? {
+    private func sided(_ table: [Facing: [Frame]], heads: [Facing: [BoneShift]]? = nil, facing: Facing, interval: TimeInterval) -> Clip? {
         if let frames = table[facing], !frames.isEmpty {
             return Clip(frames: frames, mirrored: false, interval: interval, heads: heads?[facing] ?? [])
         }
@@ -243,18 +253,35 @@ final class PetSkin<Frame>: PetAppearance {
             let sprites = paths.compactMap { loadTexture($0, measuresBody: false) }
             if !sprites.isEmpty {
                 result[facing] = sprites.map(\.frame)
-                headShifts[track, default: [:]][facing] = sprites.map { headShift(of: $0.pixels, facing: facing) }
+                headShifts[track, default: [:]][facing] = sprites.map { boneShift(of: $0.pixels, facing: facing) }
             }
         }
         return result
     }
 
-    /// 서 있는 그림 대비 머리 이동 (스킨 도트 단위). 잴 수 없으면 0
-    private func headShift(of pixels: SpritePixels?, facing: Facing) -> CGVector {
-        guard let pixels, let template = headTemplate(for: facing),
-              let shift = HeadTracker.shift(of: pixels, from: template) else { return .zero }
+    /// 서 있는 그림 대비 머리·앞손 이동 (스킨 도트 단위). 머리를 잴 수 없으면 0, 손을 잴 수 없으면 머리 이동
+    private func boneShift(of pixels: SpritePixels?, facing: Facing) -> BoneShift {
+        guard let pixels else { return BoneShift() }
         let unit = Pet.frameSide / CGFloat(pixels.width)
-        return CGVector(dx: shift.dx * unit, dy: shift.dy * unit)
+        let scaled = { (shift: CGVector) in CGVector(dx: shift.dx * unit, dy: shift.dy * unit) }
+        let head = headTemplate(for: facing).flatMap { HeadTracker.shift(of: pixels, from: $0) }.map(scaled) ?? .zero
+        let hand = handTemplate(for: facing).flatMap { HeadTracker.shift(of: pixels, from: $0) }.map(scaled) ?? head
+        return BoneShift(head: head, hand: hand)
+    }
+
+    /// 그 방향 서 있는 그림의 앞손 본 (옆모습만 앞쪽이 있음, 정면·뒷면은 가슴 높이 전체)
+    private func handTemplate(for facing: Facing) -> HeadTracker.Template? {
+        if let cached = handTemplates[facing] { return cached }
+        let template: HeadTracker.Template?
+        if let own = referencePixels[facing] {
+            template = HeadTracker.template(from: own, bone: .hand, front: facing)
+        } else if facing == .east || facing == .west, let other = referencePixels[facing.opposite] {
+            template = HeadTracker.template(from: other, mirrored: true, bone: .hand, front: facing)
+        } else {
+            template = (referencePixels[.south] ?? referencePixels.values.first).flatMap { HeadTracker.template(from: $0, bone: .hand) }
+        }
+        handTemplates[facing] = template
+        return template
     }
 
     /// 그 방향 서 있는 그림, 없으면 반대 방향을 뒤집은 것, 그것도 없으면 정면에서 만든 머리 본
@@ -291,4 +318,10 @@ final class PetSkin<Frame>: PetAppearance {
         }
         return loaded
     }
+}
+
+/// 한 프레임에서 머리와 앞손이 서 있는 그림보다 옮겨 간 정도 (스킨 도트 단위)
+struct BoneShift: Equatable {
+    var head: CGVector = .zero
+    var hand: CGVector = .zero
 }

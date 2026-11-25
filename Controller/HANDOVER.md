@@ -73,7 +73,7 @@ private/
 │   │   ├── Pet/
 │   │   │   ├── Pet.swift              # 펫 몸(발 위치·방향·딛는 면), 현재 행동, 말풍선, 클릭·알림 수신
 │   │   │   ├── PetBehavior.swift      # 행동 프로토콜(클릭·알림 반응 포함), 땅 위 공통 반응, 물리 상수
-│   │   │   ├── Behaviors/             # Idle, Walk, Climb, Airborne, Act, Dragged, Sleep, Glance(인사·돌아보기·구경), SkillLeap, Peek(최대화 창 거꾸로 빼꼼), ScreenHop(모니터 건너가기), Pounce·Throw(포인터에 뛰어오르기·무기 던지기, 정확도는 ThrowAim), CeilingWalk(창 아랫면 거꾸로 다니기), Tower(탑 맨 아래·머리로 뛰기·머리 위에 서기), Challenge(길 막은 펫에게 ⚔️ 결투 걸기), Entrance(메뉴바 밑에서 보는 창 위로 등장), Drumming(타이핑 따라 두드리기), Train(기관차·뒤 칸), CursorCarry(포인터 들고 달아나기), Fetch(물건 주우러 가기), Spin(Lv.2 한 바퀴)
+│   │   │   ├── Behaviors/             # Idle, Walk, Climb, Airborne, Act, Dragged, Sleep, Glance(인사·돌아보기·구경), SkillLeap, Peek(최대화 창 거꾸로 빼꼼), ScreenHop(모니터 건너가기), Pounce·Throw(포인터에 뛰어오르기·무기 던지기, 정확도는 ThrowAim), CeilingWalk(창 아랫면 거꾸로 다니기), Tower(탑 맨 아래·머리로 뛰기·머리 위에 서기), Challenge(길 막은 펫에게 ⚔️ 결투 걸기), Entrance(메뉴바 밑에서 보는 창 위로 등장), Drumming(타이핑 따라 두드리기), Train(기관차·뒤 칸), CursorCarry(포인터 들고 달아나기), Fetch(물건 주우러 가기), Spin(Lv.2 한 바퀴), Visit(끝난 앱의 Dock 아이콘으로 가서 두드리기)
 │   │   │   ├── BehaviorPlanner.swift  # 다음 행동 선택(잠, 커서·친구 따라가기 포함), 등반 판단
 │   │   │   ├── PetRoster.swift        # 펫 목록 소유, 진행, 일정마다 펫 배정(전령 등장·퇴장), 화면 밖 펫 복귀
 │   │   │   ├── PetSocialCoordinator.swift # 펫끼리 마주치면 인사, 티격태격 대결(25%), 또는 올라타기 (짝별 20초 간격)
@@ -93,7 +93,8 @@ private/
 │   │   │   ├── DisplayFollowCoordinator.swift # 보고 있는 모니터로 나머지 펫이 8초에 한 마리씩 건너옴, 전령 등장 위치
 │   │   │   ├── Vigor.swift            # Claude 사용량 → 기력 단계와 행동 배율
 │   │   │   ├── LeapPlanner.swift      # 창 윗변에 올라서기·빼꼼 도약 속도 계산 (순수 계산)
-│   │   │   ├── Speech.swift           # 말풍선(잡담·알림)과 반응 문구
+│   │   │   ├── Speech.swift           # 말풍선(잡담·알림)·앱 아이콘 배지(SpeechBadge)와 반응 문구
+│   │   │   ├── AgentSignalCoordinator.swift # AI 신호 → 앱 아이콘 말풍선(끝남 ✅·기다림 ✋·한도 💤), 끝난 앱 Dock 아이콘·창 찾아가기, ✋ 거두기, 클릭 시 앱 앞으로
 │   │   │   └── RandomSource.swift     # 난수 주입 (검증용 고정 시드)
 │   │   ├── Collection/
 │   │   │   ├── ItemCatalog.swift      # 물건 12종(계절 2종): 이름(영·한), 8×8 도트, 비중, 나오는 달
@@ -106,12 +107,15 @@ private/
 │   │   │   ├── PetSkin.swift          # 스프라이트 목록·애니메이션·방향별 프레임 선택 (그림 형식은 플랫폼이 정함)
 │   │   │   ├── SkinLibrary.swift      # 스킨 폴더 탐색(SkinFolder)·전체 로드
 │   │   │   ├── SpriteAlphaScanner.swift # RGBA 픽셀로 빈 프레임 판정, 몸 영역 측정
-│   │   │   ├── HeadTracker.swift      # 프레임마다 머리 이동 측정(머리 본 맞추기). 모자가 머리를 따라감
+│   │   │   ├── HeadTracker.swift      # 프레임마다 머리·앞손 이동 측정(본 맞추기). 모자는 머리, 손 소품은 손을 따라감
 │   │   │   └── PNGDecoder.swift       # 플랫폼 없이 PNG → RGBA 픽셀 (inflate 포함). 윈도우판 스킨 로더·맥 밖 검사용
 │   │   ├── Schedule/
 │   │   │   ├── ScheduleAnnouncer.swift   # 알릴 시점·문구 결정 (10분 전, 시작, 마감)
 │   │   │   └── ScheduleWatcher.swift     # 30초마다 일정 확인 → 펫에게 전달
 │   │   ├── Usage/ClaudeUsage.swift  # 사용량 파일(rate_limits) 해석, 지금 유효한 사용률
+│   │   ├── Agent/
+│   │   │   ├── AgentSignal.swift      # AI 도구 신호 파일 해석(kind·source·pid만), 세션의 앱(AgentHost)
+│   │   │   └── AgentSignalInbox.swift # ~/.deskpet/signals/*.json을 1초마다 읽고 지움 (오래된·큰 파일 버림)
 │   │   ├── Menu/
 │   │   │   ├── MenuText.swift         # 메뉴 언어 선택과 메뉴 문구 (영어·한국어 쌍)
 │   │   │   └── MenuNode.swift         # 메뉴 한 줄 데이터(MenuNode)·고른 일(MenuCommand)·대화 상자 약속(MenuDialogs)
@@ -131,13 +135,15 @@ private/
 │       │   ├── MicrophoneMonitor.swift # 마이크 사용 중인지(통화 중) 확인, 소리는 읽지 않음
 │       │   ├── KeyPressCounter.swift  # 키 누름 횟수만 셈 (어떤 키인지·내용은 모름)
 │       │   ├── CursorMover.swift      # 펫이 쥔 포인터를 옮김 (Pointer Pranks 켰을 때만)
-│       │   └── ClaudeUsageWatcher.swift # 상태줄이 남긴 Claude 사용량 파일을 30초마다 읽음
+│       │   ├── ClaudeUsageWatcher.swift # 상태줄이 남긴 Claude 사용량 파일을 30초마다 읽음
+│       │   ├── AgentHostFinder.swift  # 신호 pid → 부모를 따라 창 있는 앱 찾기, 앱 아이콘을 12px 도트 배지로
+│       │   └── DockIconLocator.swift  # 손쉬운 사용으로 Dock 항목 위치 읽기 (Dock 아이콘 찾아가기 켰을 때만)
 │       ├── World/SystemDesktop.swift # macOS 모니터·창 목록·맨 앞 앱 읽기 (Quartz → Cocoa 좌표)
 │       ├── Schedule/EventKitScheduleSource.swift # 맥 캘린더·미리 알림 읽기, 권한 요청
 │       ├── Skin/MacSprites.swift  # PNG → SpriteKit 텍스처와 픽셀 (MacSkin, MacPetDrawing)
 │       └── Stage/
 │           ├── ScreenStage.swift      # 모니터별 투명 패널, 스프라이트, 말풍선
-│           ├── SpeechBubbleNode.swift # 말풍선 모양 (잡담 흰색, 알림 노란색)
+│           ├── SpeechBubbleNode.swift # 말풍선 모양 (잡담 흰색, 알림 노란색), 글자 앞 앱 아이콘
 │           ├── SkillTrailNode.swift   # 스킬 도약 입자 (흙먼지, 불꽃, 칼바람)
 │           ├── DotArt.swift           # 텍스트 도트 → 텍스처·메뉴 아이콘
 │           └── StageDirector.swift    # 모니터 구성에 맞춰 무대 관리, 공통 그리기 목록을 무대에 넘김 (PetStage)
@@ -220,6 +226,12 @@ private/
 * `~/.claude/statusline-command.sh`에 추가한 몇 줄이 상태줄 갱신 때마다 공식 `rate_limits`만 `~/Library/Application Support/DeskPet/claude-usage.json`에 쓴다. 원본 백업: `~/.claude/statusline-command.sh.bak-deskpet`. 되돌리려면 백업으로 덮어쓰면 된다.
 * 사용률 50%부터 펫이 느려지고, 80%부터 점프·도약·대결을 안 하며, 95%부터 누워서 🪫. 한도가 초기화되면 ⚡ 하고 일어남. 메뉴 **Tire With Claude Usage**.
 * Pro·Max 구독이 아니거나 Claude Code를 아직 안 썼으면 파일이 없어 평소대로 움직인다.
+
+### AI 작업 알림 참고
+* Claude Code 훅(README "AI 작업 알림")이 `~/.deskpet/signals/`에 신호 파일을 남기면, 펫이 그 세션이 도는 앱의 아이콘과 ✅(끝남)·✋(확인 기다림)·💤(한도)를 띄운다. ✋는 펫 클릭, 그 앱으로 이동, 다시 일을 맡기면 닫힌다. 메뉴 **AI Task Alerts**.
+* 직접 시험: `printf '{"kind":"done","source":"claude","pid":%s}' $PPID > ~/.deskpet/signals/t.json`. 로그 `🤖 [Pet-n] claude (app 앱pid) done`.
+* 끝나면 펫이 그 앱의 Dock 아이콘 위로 걸어가 두드리고(메뉴 **Walk To Dock Icon**, 손쉬운 사용 권한), 아니면 그 앱 창으로 도약한다. 로그 `done, to Dock icon x …` / `done, leap to window …`. 아이콘 말풍선을 든 펫을 누르면 그 앱이 앞으로 온다(`bring app … forward`).
+* 할당량 파일을 넓히지 않고 신호로 간 이유: 할당량은 요금제마다 뜻이 다르고, 데스크톱 앱·웹에서는 남지 않으며, 다른 도구의 내부 기록(대화 포함)을 읽어야 해서.
 
 ### 쫓아다니기 참고
 * 메뉴 **Chase ▸ Mouse Pointer**를 고르면 펫들이 활성 창 대신 마우스 포인터를 쫓는다. 포인터 아래 바닥으로 걸어오고(멀면 뜀), 포인터를 창 윗변 위에 0.6초 두면 그 창으로 도약하며, 메뉴바에 두면 최대화 창에서 빼꼼한다. 포인터 곁에 오면 대부분 그 자리에서 바라본다. 포인터가 머리 위 높은 곳이면 뛰어올라 닿으려 하고(닿으면 ✨), 못 닿으면 캐릭터별 무기(몽둥이·불꽃·칼·돌멩이)를 던진다(로그 `🎯 ... threw`).

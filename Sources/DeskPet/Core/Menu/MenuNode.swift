@@ -11,7 +11,7 @@ struct MenuIcon: Equatable {
 
 /// 메뉴바 메뉴의 켜고 끄는 항목
 enum MenuToggle: Equatable {
-    case skillJumps, followDisplay, quietDuringCalls, tiresWithUsage, typing, pointerPranks, workRhythm
+    case skillJumps, followDisplay, quietDuringCalls, tiresWithUsage, agentSignals, dockVisits, typing, pointerPranks, workRhythm
     case schedules, scheduleTitles
 }
 

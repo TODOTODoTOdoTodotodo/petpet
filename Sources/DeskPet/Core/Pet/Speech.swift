@@ -17,11 +17,15 @@ struct Speech: Equatable {
     var topic: String?
     /// 남에게 보이면 안 될 때(통화 중) 대신 보여 줄 문구
     var discreetText: String?
+    /// 글자 앞에 붙는 작은 그림 (신호를 보낸 앱 아이콘)
+    var badge: SpeechBadge?
+    /// 이 말풍선을 든 펫을 누르면 앞으로 불러올 앱의 프로세스 ID
+    var appProcessID: Int32?
 
     /// 통화 중 보여 줄 말풍선 (제목 없는 문구가 있으면 그것으로)
     var discreet: Speech {
         var copy = self
-        if let discreetText { copy = Speech(text: discreetText, kind: kind, remaining: remaining, topic: topic) }
+        if let discreetText { copy = Speech(text: discreetText, kind: kind, remaining: remaining, topic: topic, badge: badge, appProcessID: appProcessID) }
         return copy
     }
 
@@ -31,12 +35,25 @@ struct Speech: Equatable {
     }
 }
 
-/// 일정 알림 하나 (어느 일정의 무슨 문구인지)
+/// 말풍선 글자 앞에 붙는 작은 그림 (곧은 알파 RGBA, 맨 윗줄부터)
+struct SpeechBadge: Equatable {
+    /// 같은 그림인지 가리는 이름 (앱 번들 ID 등). 비교는 이름으로만 함
+    let id: String
+    let pixels: SpritePixels
+
+    static func == (lhs: SpeechBadge, rhs: SpeechBadge) -> Bool { lhs.id == rhs.id }
+}
+
+/// 확인할 때까지 남는 알림 하나 (어느 일정·세션의 무슨 문구인지)
 struct ScheduleNotice: Equatable {
     let topic: String
     let text: String
     /// 제목을 뺀 문구 (통화 중 표시용)
     var discreetText: String? = nil
+    /// 글자 앞에 붙일 앱 아이콘
+    var badge: SpeechBadge? = nil
+    /// 든 펫을 누르면 앞으로 불러올 앱
+    var appProcessID: Int32? = nil
 }
 
 /// 반응 말풍선 문구

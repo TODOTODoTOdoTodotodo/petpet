@@ -136,6 +136,7 @@ struct LevelUp: Equatable {
 }
 
 /// This object is responsible for where a pet holds its item (affection Lv.4): in its front hand at chest height,
+/// moving with that hand frame by frame (arm swing while walking, crouch, jump pose) the way a hat follows the head,
 /// a little smaller than a dropped item, and hidden while the pet sleeps, peeks from behind a window or carries the pointer.
 enum HeldPlacement {
     /// 떨어진 물건보다 작게
@@ -147,8 +148,11 @@ enum HeldPlacement {
         let side = 8 * pet.scale * shrink
         let facing = pet.displayFacing
         let forward: CGFloat = facing == .east ? 1 : (facing == .west ? -1 : pet.facing.sign * 0.6)
-        let handX = pet.position.x + forward * pet.bodyHalfWidth * 0.9
-        let handY = pet.pose.upsideDown ? pet.position.y - pet.bodyHeight * 0.45 : pet.position.y + pet.bodyHeight * 0.45
+        // 지금 프레임의 손 이동 (스킨 도트 단위)
+        let hand = pet.appearance.handShift(for: pet.animation, facing: facing, elapsed: pet.animationElapsed)
+        let handX = pet.position.x + forward * pet.bodyHalfWidth * 0.9 + hand.dx * pet.scale
+        let handY = pet.pose.upsideDown ? pet.position.y - pet.bodyHeight * 0.45 - hand.dy * pet.scale
+                                        : pet.position.y + pet.bodyHeight * 0.45 + hand.dy * pet.scale
         return CGRect(x: handX - side / 2, y: handY - side / 2, width: side, height: side)
     }
 }
